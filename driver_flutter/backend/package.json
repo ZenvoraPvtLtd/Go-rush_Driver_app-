@@ -1,0 +1,32 @@
+{
+  "name": "gorush-driver-backend",
+  "version": "1.0.0",
+  "description": "GoRush Driver Partner Application - Backend Foundation & REST APIs",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "test": "node test_phase1.js && node test_phase2_unit.js",
+    "test:phase2": "node test_phase2_unit.js"
+  },
+  "keywords": [
+    "gorush",
+    "driver-app",
+    "express",
+    "mongodb",
+    "mongoose"
+  ],
+  "author": "GoRush Engineering",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
