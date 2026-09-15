@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../services/token_storage_service.dart';
 
 class BankDetailsScreen extends StatelessWidget {
   final VoidCallback? onNext;
@@ -52,13 +53,23 @@ class BankDetailsScreen extends StatelessWidget {
 
               _buildField('Bank Name', 'HDFC Bank Limited', Icons.account_balance),
               const SizedBox(height: 16),
-              _buildField('Account Holder Name', 'Rohit Sharma', Icons.person_outline),
+              _buildField(
+                'Account Holder Name',
+                (TokenStorageService.instance.driverProfile?['name'] as String?)?.isNotEmpty == true
+                    ? TokenStorageService.instance.driverProfile!['name'] as String
+                    : 'Partner Driver',
+                Icons.person_outline,
+              ),
               const SizedBox(height: 16),
               _buildField('Account Number', '50100428914092', Icons.numbers),
               const SizedBox(height: 16),
               _buildField('IFSC Code', 'HDFC0001234', Icons.pin),
               const SizedBox(height: 16),
-              _buildField('Primary UPI ID', 'rohit.sharma@okhdfcbank', Icons.payment),
+              _buildField(
+                'Primary UPI ID',
+                '${((TokenStorageService.instance.driverProfile?['name'] as String?)?.isNotEmpty == true ? (TokenStorageService.instance.driverProfile!['name'] as String).toLowerCase().replaceAll(RegExp(r'\s+'), '.') : 'partner.driver')}@okhdfcbank',
+                Icons.payment,
+              ),
 
               const SizedBox(height: 32),
 

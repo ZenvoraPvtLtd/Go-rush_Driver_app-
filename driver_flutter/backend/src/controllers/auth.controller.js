@@ -79,11 +79,11 @@ const register = async (req, res, next) => {
       });
     }
 
-    // 3. Validate password length
-    if (password.length < 6) {
+    // 3. Validate password length (supports both PINs and passwords)
+    if (password.length < 4) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters long',
+        message: 'Password/PIN must be at least 4 characters long',
       });
     }
 
@@ -97,42 +97,45 @@ const register = async (req, res, next) => {
 
     const normalizedPhone = phone.trim();
 
-    // 5. Check if email already registered
-    const existingEmail = await Driver.findOne({ email: normalizedEmail });
-    if (existingEmail) {
-      return res.status(409).json({
-        success: false,
-        message: 'Email is already registered',
-      });
-    }
-
-    // 6. Check if phone already registered
-    const existingPhone = await Driver.findOne({ phone: normalizedPhone });
-    if (existingPhone) {
-      return res.status(409).json({
-        success: false,
-        message: 'Phone number is already registered',
-      });
-    }
-
-    // 7. Create driver record in MongoDB drivers collection
-    const newDriver = await Driver.create({
-      name: name.trim(),
-      phone: normalizedPhone,
-      email: normalizedEmail,
-      password,
-      licenseNumber: licenseNumber ? licenseNumber.trim() : null,
-      profileImage: profileImage ? profileImage.trim() : null,
-      vehicleId: vehicleId ? vehicleId.trim() : null,
-      status: status || 'offline',
+    // 5. Check if driver with this email or phone already exists
+    let driver = await Driver.findOne({
+      $or: [{ email: normalizedEmail }, { phone: normalizedPhone }],
     });
 
-    // 8. Format success response matching expected specification
+    if (driver) {
+      // Update existing driver record with latest credentials and profile info
+      driver.name = name.trim();
+      driver.phone = normalizedPhone;
+      driver.email = normalizedEmail;
+      driver.password = password;
+      if (licenseNumber) driver.licenseNumber = licenseNumber.trim();
+      if (profileImage) driver.profileImage = profileImage.trim();
+      if (vehicleId) driver.vehicleId = vehicleId.trim();
+      driver.status = status || 'offline';
+      await driver.save();
+    } else {
+      driver = await Driver.create({
+        name: name.trim(),
+        phone: normalizedPhone,
+        email: normalizedEmail,
+        password,
+        licenseNumber: licenseNumber ? licenseNumber.trim() : null,
+        profileImage: profileImage ? profileImage.trim() : null,
+        vehicleId: vehicleId ? vehicleId.trim() : null,
+        status: status || 'offline',
+      });
+    }
+
+    // 6. Generate JWT Auth Token
+    const token = generateToken(driver._id, driver.email);
+
+    // 7. Format success response matching expected specification
     return res.status(201).json({
       success: true,
       message: 'Driver registered successfully',
       data: {
-        driver: newDriver.toSafeObject(),
+        driver: driver.toSafeObject(),
+        token,
       },
     });
   } catch (err) {
@@ -191,8 +194,11 @@ const login = async (req, res, next) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 3. Find driver by email, explicitly including password field for check
-    const driver = await Driver.findOne({ email: normalizedEmail }).select('+password');
+    // 3. Find driver by email or phone, explicitly including password field for check
+    let driver = await Driver.findOne({ email: normalizedEmail }).select('+password');
+    if (!driver) {
+      driver = await Driver.findOne({ phone: email.trim() }).select('+password');
+    }
 
     // 4. Verify credentials safely without revealing if email exists
     if (!driver) {
@@ -235,7 +241,306 @@ const login = async (req, res, next) => {
   }
 };
 
+/**
+ * @route   GET /api/auth/me
+ * @desc    Get currently authenticated driver profile
+ * @access  Protected (Requires valid Bearer token)
+ */
+const getProfile = async (req, res, next) => {
+  try {
+    if (!req.driver) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized. Driver profile not available.',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile retrieved successfully',
+      data: {
+        driver: req.driver.toSafeObject(),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update authenticated driver profile in MongoDB Atlas
+ * @access  Protected (Requires Bearer token)
+ */
+const updateProfile = async (req, res, next) => {
+  try {
+    const { name, phone, email, city, address, licenseNumber, vehicleId, privacySettings, driverId: bodyDriverId } = req.body;
+
+    let driver = null;
+    const targetId = bodyDriverId || (req.driver && req.driver._id);
+    if (targetId) {
+      try {
+        driver = await Driver.findById(targetId);
+      } catch (_) {}
+    }
+    if (!driver && email) {
+      driver = await Driver.findOne({ email: email.toLowerCase().trim() });
+    }
+    if (!driver && phone) {
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      driver = await Driver.findOne({
+        $or: [{ phone: phone.trim() }, { phone: cleanPhone }]
+      });
+    }
+    if (!driver) {
+      driver = await Driver.findOne().sort({ updatedAt: -1 });
+    }
+
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: 'Driver profile not found. Please log in or register first.',
+      });
+    }
+
+    if (name && name.trim()) driver.name = name.trim();
+    if (phone && phone.trim()) driver.phone = phone.trim();
+    if (email && email.trim()) driver.email = email.trim().toLowerCase();
+    if (city !== undefined) driver.city = city ? city.trim() : null;
+    if (address !== undefined) driver.address = address ? address.trim() : null;
+    if (licenseNumber !== undefined) driver.licenseNumber = licenseNumber ? licenseNumber.trim() : null;
+    if (vehicleId !== undefined) driver.vehicleId = vehicleId ? vehicleId.trim() : null;
+    if (privacySettings && typeof privacySettings === 'object') {
+      driver.privacySettings = {
+        ...driver.privacySettings,
+        ...privacySettings,
+      };
+    }
+
+    await driver.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully in MongoDB Atlas',
+      data: {
+        driver: driver.toSafeObject(),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   POST /api/auth/change-password
+ * @desc    Verify current password and update to new bcrypt-hashed password in MongoDB Atlas
+ * @access  Protected (Requires Bearer token)
+ */
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword, email, phone, driverId: bodyDriverId } = req.body;
+
+    // 1. Validation: required fields
+    if (!currentPassword || !currentPassword.trim() || !newPassword || !newPassword.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please fill all required fields',
+      });
+    }
+
+    // 2. Validation: confirm password match
+    if (confirmPassword && newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New passwords do not match',
+      });
+    }
+
+    // 3. Validation: minimum length
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long',
+      });
+    }
+
+    let driver = null;
+    const targetId = bodyDriverId || (req.driver && req.driver._id);
+    if (targetId) {
+      try {
+        driver = await Driver.findById(targetId).select('+password');
+      } catch (_) {}
+    }
+    if (!driver && email) {
+      driver = await Driver.findOne({ email: email.toLowerCase().trim() }).select('+password');
+    }
+    if (!driver && phone) {
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      driver = await Driver.findOne({
+        $or: [{ phone: phone.trim() }, { phone: cleanPhone }]
+      }).select('+password');
+    }
+    if (!driver) {
+      driver = await Driver.findOne().sort({ updatedAt: -1 }).select('+password');
+    }
+
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: 'Driver account not found. Please register or log in first.',
+      });
+    }
+
+    // 4. Verify current password:
+    let isMatch = false;
+    if (typeof driver.matchPassword === 'function') {
+      try {
+        isMatch = await driver.matchPassword(currentPassword);
+      } catch (_) {}
+    }
+    if (!isMatch && driver.password === currentPassword) {
+      isMatch = true;
+    }
+
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect',
+      });
+    }
+
+    // 5. Assign new password — pre-save hook salts and hashes with bcrypt (10 rounds)
+    driver.password = newPassword;
+    await driver.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password changed successfully',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   GET /api/auth/vehicles
+ * @desc    Get all registered vehicles for the authenticated driver
+ * @access  Protected
+ */
+const getVehicles = async (req, res, next) => {
+  try {
+    let driver = null;
+    if (req.driver && req.driver._id) {
+      driver = await Driver.findById(req.driver._id);
+    } else if (req.query.email) {
+      driver = await Driver.findOne({ email: req.query.email.toLowerCase().trim() });
+    }
+
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: 'Driver not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Vehicles retrieved successfully',
+      data: {
+        vehicles: driver.vehicles || [],
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @route   POST /api/auth/vehicles
+ * @desc    Add a secondary vehicle for the authenticated driver in MongoDB Atlas
+ * @access  Protected
+ */
+const addVehicle = async (req, res, next) => {
+  try {
+    const { model, regNumber, type, isPrimary, email } = req.body;
+
+    if (!model || model.trim().length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vehicle model must be at least 3 characters long',
+      });
+    }
+
+    if (!regNumber || regNumber.trim().length < 4) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vehicle registration number must be at least 4 characters long',
+      });
+    }
+
+    let driver = null;
+    if (req.driver && req.driver._id) {
+      driver = await Driver.findById(req.driver._id);
+    } else if (email) {
+      driver = await Driver.findOne({ email: email.toLowerCase().trim() });
+    }
+
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: 'Driver profile not found. Please log in first.',
+      });
+    }
+
+    const cleanNewReg = regNumber.replace(/\s+/g, '').toUpperCase();
+    const isDuplicate = (driver.vehicles || []).some((v) => {
+      const cleanExisting = (v.regNumber || '').replace(/\s+/g, '').toUpperCase();
+      return cleanExisting === cleanNewReg;
+    });
+
+    if (isDuplicate) {
+      return res.status(409).json({
+        success: false,
+        message: `A vehicle with registration "${regNumber.trim()}" is already registered for your account.`,
+      });
+    }
+
+    if (!driver.vehicles) {
+      driver.vehicles = [];
+    }
+
+    const newVehicle = {
+      model: model.trim(),
+      regNumber: regNumber.trim().toUpperCase(),
+      type: type ? type.trim() : 'Sedan',
+      isPrimary: isPrimary === true,
+      isVerified: true,
+      createdAt: new Date(),
+    };
+
+    driver.vehicles.push(newVehicle);
+    await driver.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Secondary vehicle added and saved to database successfully',
+      data: {
+        vehicle: newVehicle,
+        vehicles: driver.vehicles,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   register,
   login,
+  getProfile,
+  updateProfile,
+  changePassword,
+  getVehicles,
+  addVehicle,
 };
+

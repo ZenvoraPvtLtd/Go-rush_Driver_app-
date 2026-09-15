@@ -1,112 +1,152 @@
-﻿import 'dart:convert';
-import 'dart:io' show Platform, Directory, File;
-import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_config.dart';
+import 'token_storage_service.dart';
+import 'auth_api_service.dart';
+import 'app_language_service.dart';
 
 class DriverBackendService {
   static final DriverBackendService instance = DriverBackendService._internal();
   factory DriverBackendService() => instance;
   DriverBackendService._internal();
 
-  // Configurable base URL: Android emulator uses 10.0.2.2, Web/Desktop uses localhost
-  static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:4000';
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:4000';
-      return 'http://localhost:4000';
-    } catch (_) {
-      return 'http://localhost:4000';
-    }
-  }
+  final TokenStorageService _tokenStorage = TokenStorageService.instance;
+  final AuthApiService _authApi = AuthApiService.instance;
 
-  String? _accessToken = 'mock_driver_jwt_token_dl99421';
-  String? _refreshToken = 'mock_driver_refresh_token_dl99421';
-  Map<String, dynamic>? _driverProfile = {
-    'id': 'drv_dl99421',
-    'name': 'Rohit Sharma',
-    'phone': '+91 98765 43210',
-    'status': 'ACTIVE',
-  };
-  bool _isAuthenticated = true;
+  // Configurable base URL: uses ApiConfig dynamically resolving port 5000
+  static String get baseUrl => ApiConfig.baseUrl;
 
-  bool get isAuthenticated => _isAuthenticated;
-  String? get accessToken => _accessToken;
-  String? get refreshToken => _refreshToken;
-  Map<String, dynamic>? get driverProfile => _driverProfile;
+  bool get isAuthenticated => _tokenStorage.isAuthenticated;
+  String? get accessToken => _tokenStorage.accessToken;
+  String? get refreshToken => _tokenStorage.refreshToken;
+  Map<String, dynamic>? get driverProfile => _tokenStorage.driverProfile;
 
-  Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
-  };
+  Map<String, String> get _headers => ApiConfig.getHeaders(token: accessToken);
 
-  static File get _sessionFile {
-    final tempDir = Directory.systemTemp;
-    return File('${tempDir.path}/quickserve_driver_session.json');
-  }
-
-  /// Initialize session from persisted storage on app startup
+  /// Initialize session from persisted secure storage on app startup
   Future<void> initSession() async {
-    try {
-      final file = _sessionFile;
-      if (await file.exists()) {
-        final content = await file.readAsString();
-        final data = jsonDecode(content);
-        if (data is Map<String, dynamic>) {
-          _isAuthenticated = data['isAuthenticated'] == true;
-          _accessToken = data['accessToken'] as String?;
-          _refreshToken = data['refreshToken'] as String?;
-          _driverProfile = data['driverProfile'] as Map<String, dynamic>?;
-          return;
-        }
-      }
-      // Default initial state: authenticated for demo
-      _isAuthenticated = true;
-    } catch (_) {
-      _isAuthenticated = true;
+    await _tokenStorage.init();
+    await AppLanguageService.instance.init();
+    if (!isAuthenticated) {
+      // Default to unauthenticated until driver logs in or registers
     }
   }
 
-  /// REAL LOGOUT: Clears tokens, profile, auth state, and persists logged-out status
-  void logout() {
-    _isAuthenticated = false;
-    _accessToken = null;
-    _refreshToken = null;
-    _driverProfile = null;
-    try {
-      final file = _sessionFile;
-      file.writeAsString(jsonEncode({
-        'isAuthenticated': false,
-        'accessToken': null,
-        'refreshToken': null,
-        'driverProfile': null,
-      }));
-    } catch (_) {}
+  /// REAL LOGOUT: Clears stored authentication tokens, profile, and auth state
+  Future<void> logout() async {
+    await _tokenStorage.clearSession();
   }
 
-  /// SAVE SESSION: Saves authenticated session upon login or OTP verification
-  void saveSession({
+  /// SAVE SESSION: Saves authenticated session upon login or registration
+  Future<void> saveSession({
     String? accessToken,
     String? refreshToken,
     Map<String, dynamic>? driverProfile,
-  }) {
-    _isAuthenticated = true;
-    _accessToken = accessToken ?? 'mock_driver_jwt_token_dl99421';
-    _refreshToken = refreshToken ?? 'mock_driver_refresh_token_dl99421';
-    _driverProfile = driverProfile ?? {
-      'id': 'drv_dl99421',
-      'name': 'Rohit Sharma',
-      'phone': '+91 98765 43210',
-      'status': 'ACTIVE',
-    };
-    try {
-      final file = _sessionFile;
-      file.writeAsString(jsonEncode({
-        'isAuthenticated': true,
-        'accessToken': _accessToken,
-        'refreshToken': _refreshToken,
-        'driverProfile': _driverProfile,
-      }));
-    } catch (_) {}
+  }) async {
+    final effectiveProfile = driverProfile ?? _tokenStorage.driverProfile;
+    await _tokenStorage.saveSession(
+      accessToken: accessToken ?? _tokenStorage.accessToken ?? 'authenticated_driver_token',
+      refreshToken: refreshToken ?? _tokenStorage.refreshToken,
+      driverProfile: effectiveProfile,
+    );
+  }
+
+  /// Real Login API Call
+  Future<AuthResult> login({
+    required String email,
+    required String password,
+  }) async {
+    return _authApi.login(email: email, password: password);
+  }
+
+  /// Real Registration API Call
+  Future<AuthResult> register({
+    required String name,
+    required String phone,
+    required String email,
+    required String password,
+    String? licenseNumber,
+    String? profileImage,
+    String? vehicleId,
+  }) async {
+    return _authApi.register(
+      name: name,
+      phone: phone,
+      email: email,
+      password: password,
+      licenseNumber: licenseNumber,
+      profileImage: profileImage,
+      vehicleId: vehicleId,
+    );
+  }
+
+  /// Real Authenticated Profile API Call (GET /api/auth/me)
+  Future<AuthResult> getAuthenticatedProfile() async {
+    return _authApi.getAuthenticatedProfile();
+  }
+
+  /// Change Password API Call
+  Future<AuthResult> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    String? confirmPassword,
+  }) async {
+    return _authApi.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+      confirmPassword: confirmPassword,
+    );
+  }
+
+  /// Update Driver Profile API Call
+  Future<AuthResult> updateProfile({
+    String? name,
+    String? phone,
+    String? email,
+    String? city,
+    String? address,
+    String? licenseNumber,
+    String? vehicleNumber,
+    Map<String, bool>? privacySettings,
+  }) async {
+    await _tokenStorage.updateProfile(
+      name: name,
+      phone: phone,
+      email: email,
+      city: city,
+      address: address,
+      licenseNumber: licenseNumber,
+      vehicleNumber: vehicleNumber,
+    );
+
+    return _authApi.updateProfile(
+      name: name,
+      phone: phone,
+      email: email,
+      city: city,
+      address: address,
+      licenseNumber: licenseNumber,
+      vehicleNumber: vehicleNumber,
+      privacySettings: privacySettings,
+    );
+  }
+
+  /// Add Secondary Vehicle API Call
+  Future<AuthResult> addVehicle({
+    required String model,
+    required String regNumber,
+    required String type,
+  }) async {
+    return _authApi.addVehicle(
+      model: model,
+      regNumber: regNumber,
+      type: type,
+    );
+  }
+
+  /// Get Registered Vehicles API Call
+  Future<List<Map<String, dynamic>>> getVehicles() async {
+    return _authApi.getVehicles();
   }
 
   /// 1. Auth: Send 6-digit OTP
@@ -140,14 +180,13 @@ class DriverBackendService {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (data['success'] == true) {
-          _accessToken = data['data']?['accessToken'];
-          _refreshToken = data['data']?['refreshToken'];
-          _driverProfile = data['data']?['driver'];
-          _isAuthenticated = true;
-          saveSession(
-            accessToken: _accessToken,
-            refreshToken: _refreshToken,
-            driverProfile: _driverProfile,
+          final token = data['data']?['accessToken'] as String?;
+          final rToken = data['data']?['refreshToken'] as String?;
+          final profile = data['data']?['driver'] as Map<String, dynamic>?;
+          await saveSession(
+            accessToken: token,
+            refreshToken: rToken,
+            driverProfile: profile,
           );
           return true;
         }

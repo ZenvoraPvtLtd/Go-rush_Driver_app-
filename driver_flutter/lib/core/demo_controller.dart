@@ -3,30 +3,56 @@ import 'package:flutter/material.dart';
 
 enum DemoScreen {
   splashScreen, // 01
-  loginRegister, // 02
-  otpVerification, // 03
-  driverProfileSetup, // 04
-  uploadDocuments, // 05
-  bankDetails, // 06
-  termsConditions, // 07
-  registrationComplete, // 08
-  driverHomeDashboard, // 09 (Startup)
-  incomingRideRequest, // 10
-  activeTripNavigation, // 11
-  passengerTripManagement, // 12
-  tripCompletion, // 13
-  fareBreakdown, // 14
-  earningsInstantPayout, // 15
-  tripHistoryDetailedReceipt, // 16
-  notificationCenterAlerts, // 17
-  safetyHubSosCenter, // 18
-  helpCenterSupportTickets, // 19
-  driverProfileVehicleSettings, // 20
-  vehicleManagement, // 21
-  scheduledRidesAdvanceBookings, // 22
-  ratingsReviewsDisputeCenter, // 23
-  supportTicketsScreen, // 24
-  adminPanelFleet, // 25
+  createAccount, // 02 (Create Account)
+  loginRegister, // Alias for 02 backward compatibility
+  profile, // 03 (Profile with emerald green wave)
+  driverProfileVehicleSettings, // Alias for 03
+  documentUpload, // 04 (Document upload)
+  uploadDocuments, // Alias for 04
+  otpVerification, // 05 (OTP Verification)
+  homeDashboard, // 06 (Home / Dashboard)
+  driverHomeDashboard, // Alias for 06
+  rides, // 07 (Rides / My Rides)
+  earnings, // 08 (Earnings)
+  earningsInstantPayout, // Alias for 08
+  incentives, // 09 (Incentives / Drive More Earn More)
+  incentivesWeeklyQuests, // Alias for 09
+  ratingsReviews, // 10 (Ratings & Reviews)
+  ratingsReviewsDisputeCenter, // Alias for 10
+  scheduledRides, // 11 (Scheduled Rides)
+  scheduledRidesAdvanceBookings, // Alias for 11
+  notifications, // 12 (Notifications)
+  notificationCenterAlerts, // Alias for 12
+  navigationLiveMap, // 13 (Navigation / Live Map / On Trip)
+  activeTripNavigation, // Alias for 13
+  tripCompletionReceipt, // 14 (Trip Completion / Receipt)
+  tripCompletion, // Alias for 14
+  instantCashOut, // 15 (Instant Cash Out)
+  viewEarningStatement, // 16 (View Earning Statement)
+  supportHub, // 17 (Support Hub)
+  helpCenterSupportTickets, // Alias for 17
+  settings, // 18 (Settings)
+  login, // 19 (Login)
+  forgotPassword, // 20 (Forgot Password)
+  onboarding1, // 21 (Onboarding 1)
+  onboarding2, // 22 (Onboarding 2)
+  onboarding3, // 23 (Onboarding 3)
+  fleetAdmin, // 24 (Admin / Fleet)
+  adminPanelFleet, // Alias for 24
+  // Extra aliases for complete safety
+  driverProfileSetup,
+  bankDetails,
+  termsConditions,
+  registrationComplete,
+  incomingRideRequest,
+  passengerTripManagement,
+  fareBreakdown,
+  tripHistoryDetailedReceipt,
+  completedHistory,
+  cancelledHistory,
+  safetyHubSosCenter,
+  vehicleManagement,
+  supportTicketsScreen,
 }
 
 class DemoStepInfo {
@@ -53,254 +79,264 @@ class DemoFlowController extends ChangeNotifier {
       screen: DemoScreen.splashScreen,
       title: '01 — Splash Screen',
       codeName: 'splash_screen',
-      subtitle: 'Drive • Earn • Grow • Dark #121212',
+      subtitle: 'GoRush Driver App • Blue Hatchback Night Car',
     ),
     DemoStepInfo(
-      screen: DemoScreen.loginRegister,
-      title: '02 — Login / Register',
+      screen: DemoScreen.createAccount,
+      title: '02 — Create Account',
       codeName: 'driver_login_registration',
-      subtitle: 'Phone Number & OTP Authentication',
+      subtitle: 'Create Your Account • Join GoRush Today',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.profile,
+      title: '03 — Profile',
+      codeName: 'driver_profile_vehicle_settings',
+      subtitle: 'Rohit Sharma • 3.5 Rating • Go Online',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.documentUpload,
+      title: '04 — Document Upload',
+      codeName: 'upload_documents_screen',
+      subtitle: 'DL, RC, Insurance & Verification Status',
     ),
     DemoStepInfo(
       screen: DemoScreen.otpVerification,
-      title: '03 — OTP Verification',
+      title: '05 — OTP Verification',
       codeName: 'otp_verification_liveness',
-      subtitle: '6-digit OTP & Resend Timer',
+      subtitle: 'ID Card Graphic • 6-Digit OTP • Resend 00:59',
     ),
     DemoStepInfo(
-      screen: DemoScreen.driverProfileSetup,
-      title: '04 — Driver Profile Setup',
-      codeName: 'driver_profile_setup',
-      subtitle: 'Rohit Sharma, DOB & Contact Details',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.uploadDocuments,
-      title: '05 — Upload Documents',
-      codeName: 'upload_documents_screen',
-      subtitle: 'DL, RC, Insurance & Verification',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.bankDetails,
-      title: '06 — Bank Details / UPI',
-      codeName: 'bank_details_screen',
-      subtitle: 'HDFC Bank, Account & IFSC Payouts',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.termsConditions,
-      title: '07 — Terms & Conditions',
-      codeName: 'terms_conditions_screen',
-      subtitle: 'Partner Agreement & Driver Safety Policy',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.registrationComplete,
-      title: '08 — Registration Complete',
-      codeName: 'registration_complete_screen',
-      subtitle: 'Profile Submitted & Approval Status',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.driverHomeDashboard,
-      title: '09 — Driver Home / Dashboard',
+      screen: DemoScreen.homeDashboard,
+      title: '06 — Home / Dashboard',
       codeName: 'driver_home_dashboard',
-      subtitle: 'Online • Sector 62, Noida • ₹1,240 Today',
+      subtitle: 'Good Morning Pane Name • ₹12,400 Today • 5-Tab Nav',
     ),
     DemoStepInfo(
-      screen: DemoScreen.incomingRideRequest,
-      title: '10 — Incoming Ride Request',
-      codeName: 'incoming_ride_request',
-      subtitle: 'Priya Sharma • ₹362 • 16.4 km • CP Delhi',
+      screen: DemoScreen.rides,
+      title: '07 — Rides',
+      codeName: 'rides_screen',
+      subtitle: 'My Rides • Ongoing & History • Accept / Decline',
     ),
     DemoStepInfo(
-      screen: DemoScreen.activeTripNavigation,
-      title: '11 — Navigation & Live Tracking',
-      codeName: 'active_trip_navigation',
-      subtitle: 'Light Map • Blue Route • Arrived CTA',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.passengerTripManagement,
-      title: '12 — Passenger Trip Management',
-      codeName: 'passenger_trip_management',
-      subtitle: 'Trip in Progress • Call/Chat • Start Trip',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.tripCompletion,
-      title: '13 — Trip Completion',
-      codeName: 'trip_completion_screen',
-      subtitle: 'Trip Completed • ₹362 Total • ₹282 Earnings',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.fareBreakdown,
-      title: '14 — Fare Breakdown',
-      codeName: 'fare_breakdown_screen',
-      subtitle: 'Base ₹240, Distance ₹110, UPI Google Pay',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.earningsInstantPayout,
-      title: '15 — Earnings',
+      screen: DemoScreen.earnings,
+      title: '08 — Earnings',
       codeName: 'earnings_instant_payout',
-      subtitle: 'Today ₹2,480 • 12 Rides • 6h 30m',
+      subtitle: 'Total Earnings ₹23,000 • Cash Out & Statement',
     ),
     DemoStepInfo(
-      screen: DemoScreen.tripHistoryDetailedReceipt,
-      title: '16 — Trip History',
-      codeName: 'trip_history_detailed_receipt',
-      subtitle: 'Sector 62 to CP, Gurgaon, Noida rides',
+      screen: DemoScreen.incentives,
+      title: '09 — Incentives',
+      codeName: 'incentives_weekly_quests',
+      subtitle: 'Drive More Earn More • Challenges & Top Driver',
     ),
     DemoStepInfo(
-      screen: DemoScreen.notificationCenterAlerts,
-      title: '17 — Notifications',
-      codeName: 'notification_center_alerts',
-      subtitle: 'Ride Requests, Payments, Document Expiry',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.safetyHubSosCenter,
-      title: '18 — Safety & SOS',
-      codeName: 'safety_hub_sos_center',
-      subtitle: 'Large Red SOS Button & Emergency Contacts',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.helpCenterSupportTickets,
-      title: '19 — Support',
-      codeName: 'help_center_support_tickets',
-      subtitle: 'Help Center & Raise Support Tickets',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.driverProfileVehicleSettings,
-      title: '20 — Driver Profile & Settings',
-      codeName: 'driver_profile_vehicle_settings',
-      subtitle: 'Rohit Sharma, Vehicle, Documents & Logout',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.vehicleManagement,
-      title: '21 — Vehicle Management',
-      codeName: 'vehicle_management_screen',
-      subtitle: 'Honda City DL 01 AB 1234 • Verified',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.scheduledRidesAdvanceBookings,
-      title: '22 — Scheduled Rides',
-      codeName: 'scheduled_rides_advance_bookings',
-      subtitle: 'Tomorrow 06:00 AM • Airport ₹620',
-    ),
-    DemoStepInfo(
-      screen: DemoScreen.ratingsReviewsDisputeCenter,
-      title: '23 — Ratings & Reviews',
+      screen: DemoScreen.ratingsReviews,
+      title: '10 — Ratings / Reviews',
       codeName: 'ratings_reviews_dispute_center',
-      subtitle: '4.8 ★ (138 ratings) • Breakdown & Reviews',
+      subtitle: '4.8 Score • 5-Star Breakdown & Driver Reviews',
     ),
     DemoStepInfo(
-      screen: DemoScreen.supportTicketsScreen,
-      title: '24 — Support Tickets',
-      codeName: 'support_tickets_screen',
-      subtitle: 'Active Tickets & Dispute Resolution',
+      screen: DemoScreen.scheduledRides,
+      title: '11 — Scheduled Rides',
+      codeName: 'scheduled_rides_advance_bookings',
+      subtitle: 'Upcoming & Past • Airport, Office & Hotel Rides',
     ),
     DemoStepInfo(
-      screen: DemoScreen.adminPanelFleet,
-      title: '25 — Admin Panel (Web)',
+      screen: DemoScreen.notifications,
+      title: '12 — Notifications',
+      codeName: 'notification_center_alerts',
+      subtitle: 'Ride Request, Payout, Incentives & Alerts',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.navigationLiveMap,
+      title: '13 — Navigation / Live Map',
+      codeName: 'active_trip_navigation',
+      subtitle: 'On Trip • Live Route • Riya Sharma • End Trip',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.tripCompletionReceipt,
+      title: '14 — Trip Completion / Receipt',
+      codeName: 'trip_completion_screen',
+      subtitle: 'Ride Completed • ₹320 Total • View Receipt',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.instantCashOut,
+      title: '15 — Instant Cash Out',
+      codeName: 'instant_cash_out_screen',
+      subtitle: 'Available Balance ₹2,500 • Quick Withdraw',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.viewEarningStatement,
+      title: '16 — View Earning Statement',
+      codeName: 'view_earning_statement_screen',
+      subtitle: 'May 2026 • ₹23,000 • Vertical Bar Trend Chart',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.supportHub,
+      title: '17 — Support Hub',
+      codeName: 'help_center_support_tickets',
+      subtitle: 'Help Center • Live Chat • Call Support',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.settings,
+      title: '18 — Settings',
+      codeName: 'settings_screen',
+      subtitle: 'User Pane Driver • Documents • Vehicles • Log Out',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.login,
+      title: '19 — Login',
+      codeName: 'driver_login_screen',
+      subtitle: 'GoRush Driver App • Welcome Back! • Sign In',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.forgotPassword,
+      title: '20 — Forgot Password',
+      codeName: 'forgot_password_screen',
+      subtitle: 'Reset Password • Send OTP',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.onboarding1,
+      title: '21 — Onboarding 1',
+      codeName: 'onboarding_slides_screen',
+      subtitle: 'Drive Your Way • Flexible timings & control',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.onboarding2,
+      title: '22 — Onboarding 2',
+      codeName: 'onboarding_slides_screen',
+      subtitle: 'Get Ride Requests • Accept & navigate easily',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.onboarding3,
+      title: '23 — Onboarding 3',
+      codeName: 'onboarding_slides_screen',
+      subtitle: 'Earn More • Incentives, bonuses & cash out',
+    ),
+    DemoStepInfo(
+      screen: DemoScreen.fleetAdmin,
+      title: '24 — Admin / Fleet (Optional)',
       codeName: 'fleet_admin_screen',
-      subtitle: 'QuickServe Admin • Dark Sidebar • Fleet Table',
+      subtitle: 'Fleet Management • 124 Drivers • 110 Vehicles',
     ),
   ];
 
-  late int _currentIndex;
+  DemoScreen _currentScreen;
+  int _currentStepIndex;
+  bool _isPlaying;
   int _currentTick = 0;
-  bool _isPlaying = false; // By default paused on Driver Home Dashboard so user can inspect
-  bool _isPausedByUser = true;
   Timer? _timer;
 
-  int get currentIndex => _currentIndex;
-  double get progress => (_currentTick / totalTicks).clamp(0.0, 1.0);
-  double get remainingSeconds => ((totalTicks - _currentTick) * tickIntervalMs / 1000.0).clamp(0.0, totalSeconds.toDouble());
+  DemoFlowController({
+    DemoScreen initialScreen = DemoScreen.splashScreen,
+    bool autoStart = false,
+  })  : _currentScreen = initialScreen,
+        _currentStepIndex = _indexForScreen(initialScreen),
+        _isPlaying = autoStart {
+    if (_isPlaying) {
+      _startTimer();
+    }
+  }
+
+  DemoScreen get currentScreen => _currentScreen;
+  int get currentStepIndex => _currentStepIndex;
+  int get currentIndex => _currentStepIndex;
+  DemoStepInfo get currentStep => steps[_currentStepIndex];
   bool get isPlaying => _isPlaying;
-  bool get isPausedByUser => _isPausedByUser;
-  DemoStepInfo get currentStep => steps[_currentIndex];
-  DemoScreen get currentScreen => currentStep.screen;
+  double get stepProgress => _currentTick / totalTicks;
+  double get progress => stepProgress;
+  String get currentScreenTitle => steps[_currentStepIndex].title;
+  String get currentCodeName => steps[_currentStepIndex].codeName;
+  String get currentSubtitle => steps[_currentStepIndex].subtitle;
 
-  DemoFlowController({DemoScreen initialScreen = DemoScreen.driverHomeDashboard, bool autoStart = false}) {
-    final idx = steps.indexWhere((s) => s.screen == initialScreen);
-    _currentIndex = idx != -1 ? idx : 8; // Screen 09 Driver Home Dashboard default
-    if (autoStart) {
-      start();
+  static int _indexForScreen(DemoScreen screen) {
+    for (int i = 0; i < steps.length; i++) {
+      if (steps[i].screen == screen) return i;
     }
+    return 0;
   }
 
-  void start() {
+  void _startTimer() {
     _timer?.cancel();
-    _isPlaying = true;
-    _isPausedByUser = false;
     _currentTick = 0;
-    _timer = Timer.periodic(const Duration(milliseconds: tickIntervalMs), _onTick);
-    notifyListeners();
-  }
-
-  void _onTick(Timer timer) {
-    if (!_isPlaying) return;
-    _currentTick++;
-    if (_currentTick >= totalTicks) {
-      _currentTick = 0;
-      _currentIndex = (_currentIndex + 1) % steps.length;
-    }
-    notifyListeners();
-  }
-
-  void togglePlayPause() {
-    if (_isPlaying) {
-      pause(userInitiated: true);
-    } else {
-      resume();
-    }
-  }
-
-  void pause({bool userInitiated = true}) {
-    if (_isPlaying) {
-      _isPlaying = false;
-      _isPausedByUser = userInitiated;
-      _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: tickIntervalMs), (timer) {
+      _currentTick++;
+      if (_currentTick >= totalTicks) {
+        _currentTick = 0;
+        _advanceToNextScreen();
+      }
       notifyListeners();
-    }
+    });
   }
 
-  void resume() {
-    _isPlaying = true;
-    _isPausedByUser = false;
+  void _advanceToNextScreen() {
+    _currentStepIndex = (_currentStepIndex + 1) % steps.length;
+    _currentScreen = steps[_currentStepIndex].screen;
     _currentTick = 0;
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(milliseconds: tickIntervalMs), _onTick);
     notifyListeners();
   }
 
   void userInteracted({bool pauseAuto = true}) {
-    if (pauseAuto) {
-      pause(userInitiated: true);
+    if (pauseAuto && _isPlaying) {
+      pause();
+    }
+  }
+
+  void play() {
+    if (!_isPlaying) {
+      _isPlaying = true;
+      _startTimer();
+      notifyListeners();
+    }
+  }
+
+  void pause() {
+    if (_isPlaying) {
+      _isPlaying = false;
+      _timer?.cancel();
+      _timer = null;
+      notifyListeners();
+    }
+  }
+
+  void togglePlayPause() {
+    if (_isPlaying) {
+      pause();
     } else {
-      _currentTick = 0;
-      notifyListeners();
+      play();
     }
   }
 
-  void next() {
-    _currentIndex = (_currentIndex + 1) % steps.length;
+  void nextScreen() {
+    _advanceToNextScreen();
+  }
+
+  void next() => nextScreen();
+
+  void previousScreen() {
+    _currentStepIndex = (_currentStepIndex - 1 + steps.length) % steps.length;
+    _currentScreen = steps[_currentStepIndex].screen;
     _currentTick = 0;
     notifyListeners();
   }
 
-  void previous() {
-    _currentIndex = (_currentIndex - 1 + steps.length) % steps.length;
-    _currentTick = 0;
-    notifyListeners();
-  }
-
-  void jumpTo(int index) {
-    if (index >= 0 && index < steps.length) {
-      _currentIndex = index;
-      _currentTick = 0;
-      notifyListeners();
-    }
-  }
+  void previous() => previousScreen();
 
   void jumpToScreen(DemoScreen screen) {
-    final idx = steps.indexWhere((s) => s.screen == screen);
-    if (idx != -1) {
-      jumpTo(idx);
+    _currentScreen = screen;
+    _currentStepIndex = _indexForScreen(screen);
+    _currentTick = 0;
+    notifyListeners();
+  }
+
+  void jumpTo(int index) => jumpToIndex(index);
+
+  void jumpToIndex(int index) {
+    if (index >= 0 && index < steps.length) {
+      _currentStepIndex = index;
+      _currentScreen = steps[index].screen;
+      _currentTick = 0;
+      notifyListeners();
     }
   }
 

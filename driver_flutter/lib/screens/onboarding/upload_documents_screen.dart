@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../core/app_toast.dart';
 
-class UploadDocumentsScreen extends StatelessWidget {
+class UploadDocumentsScreen extends StatefulWidget {
   final VoidCallback? onNext;
   final VoidCallback? onBackTap;
 
@@ -12,19 +13,74 @@ class UploadDocumentsScreen extends StatelessWidget {
   });
 
   @override
+  State<UploadDocumentsScreen> createState() => _UploadDocumentsScreenState();
+}
+
+class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
+  // Document states
+  final List<Map<String, dynamic>> _documents = [
+    {
+      'title': 'Profile Photo',
+      'subtitle': 'Passport size clear photo',
+      'uploaded': true,
+      'icon': Icons.account_box_outlined,
+    },
+    {
+      'title': 'Driving License',
+      'subtitle': 'DL-142011001234 • Front & Back',
+      'uploaded': true,
+      'icon': Icons.badge_outlined,
+    },
+    {
+      'title': 'Vehicle RC',
+      'subtitle': 'Registration Certificate DL 01 AB 1234',
+      'uploaded': true,
+      'icon': Icons.directions_car_outlined,
+    },
+    {
+      'title': 'Vehicle Insurance',
+      'subtitle': 'Commercial policy valid till Oct 2026',
+      'uploaded': false,
+      'icon': Icons.verified_user_outlined,
+    },
+    {
+      'title': 'Police Verification',
+      'subtitle': 'Character verification certificate',
+      'uploaded': false,
+      'icon': Icons.security_outlined,
+    },
+  ];
+
+  void _handleSubmitDocuments() {
+    setState(() {
+      for (var doc in _documents) {
+        doc['uploaded'] = true;
+      }
+    });
+    AppToast.success(context, 'Documents submitted successfully!');
+    if (widget.onNext != null) {
+      widget.onNext!();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: QuickServeColors.surfaceLight,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: QuickServeColors.textDark),
-          onPressed: onBackTap ?? () => Navigator.of(context).maybePop(),
+          onPressed: widget.onBackTap ?? () => Navigator.of(context).maybePop(),
         ),
         title: const Text(
-          'Upload Documents',
-          style: TextStyle(color: QuickServeColors.textDark, fontSize: 18, fontWeight: FontWeight.bold),
+          'Document upload',
+          style: TextStyle(
+            color: QuickServeColors.textDark,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
@@ -32,141 +88,168 @@ class UploadDocumentsScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Required Partner Documents',
-                style: TextStyle(color: QuickServeColors.textDark, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Please ensure images are clear, unblurred, and show valid expiry dates.',
-                style: TextStyle(color: QuickServeColors.textSecondary, fontSize: 13),
-              ),
-
-              const SizedBox(height: 20),
-
-              _buildDocCard(
-                title: 'Commercial Driving License',
-                subtitle: 'DL-142011001234 • Valid till 2031',
-                isUploaded: true,
-              ),
-              const SizedBox(height: 12),
-              _buildDocCard(
-                title: 'Vehicle RC (Registration)',
-                subtitle: 'DL 01 AB 1234 • Honda City Sedan',
-                isUploaded: true,
-              ),
-              const SizedBox(height: 12),
-              _buildDocCard(
-                title: 'Commercial Insurance Policy',
-                subtitle: 'Policy #BA-9921004 • Valid till Oct 2026',
-                isUploaded: true,
-              ),
-              const SizedBox(height: 12),
-              _buildDocCard(
-                title: 'Driver Aadhaar & PAN Card',
-                subtitle: 'Aadhaar Verified • Biometric Complete',
-                isUploaded: true,
-              ),
-
-              const SizedBox(height: 32),
-
-              ElevatedButton(
-                onPressed: onNext,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: QuickServeColors.primaryOrange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Next: Bank Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward, size: 18),
+                    const Text(
+                      'Upload your documents for verification',
+                      style: TextStyle(
+                        color: QuickServeColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // 5 Document Cards (Phone 4)
+                    ...List.generate(_documents.length, (idx) {
+                      final doc = _documents[idx];
+                      final isUploaded = doc['uploaded'] == true;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isUploaded
+                                ? QuickServeColors.statusGreen.withOpacity(0.3)
+                                : QuickServeColors.borderLight,
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: isUploaded
+                                    ? QuickServeColors.statusGreenLight
+                                    : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                isUploaded ? Icons.verified : doc['icon'] as IconData,
+                                color: isUploaded
+                                    ? QuickServeColors.statusGreen
+                                    : QuickServeColors.textSecondary,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    doc['title'] as String,
+                                    style: const TextStyle(
+                                      color: QuickServeColors.textDark,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    doc['subtitle'] as String,
+                                    style: const TextStyle(
+                                      color: QuickServeColors.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _documents[idx]['uploaded'] = !_documents[idx]['uploaded'];
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isUploaded
+                                      ? QuickServeColors.statusGreenLight
+                                      : QuickServeColors.statusAmberLight,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isUploaded
+                                        ? QuickServeColors.statusGreen
+                                        : QuickServeColors.statusAmber,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isUploaded ? Icons.check_circle : Icons.upload_file,
+                                      size: 14,
+                                      color: isUploaded
+                                          ? QuickServeColors.statusGreen
+                                          : QuickServeColors.statusAmber,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isUploaded ? 'Uploaded' : 'Pending',
+                                      style: TextStyle(
+                                        color: isUploaded
+                                            ? QuickServeColors.statusGreen
+                                            : QuickServeColors.statusAmber,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDocCard({
-    required String title,
-    required String subtitle,
-    required bool isUploaded,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: QuickServeColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isUploaded ? const Color(0xFFE8F8EE) : const Color(0xFFFFECE6),
-              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              isUploaded ? Icons.verified : Icons.upload_file,
-              color: isUploaded ? QuickServeColors.statusGreen : QuickServeColors.primaryOrange,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(color: QuickServeColors.textDark, fontSize: 14, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _handleSubmitDocuments,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: QuickServeColors.primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Submit Documents',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(color: QuickServeColors.textSecondary, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: isUploaded ? const Color(0xFFE8F8EE) : QuickServeColors.primaryOrange,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              isUploaded ? 'Verified' : 'Upload',
-              style: TextStyle(
-                color: isUploaded ? QuickServeColors.statusGreen : Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

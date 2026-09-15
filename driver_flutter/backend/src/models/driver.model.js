@@ -25,7 +25,7 @@ const driverSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters long'],
+      minlength: [4, 'Password/PIN must be at least 4 characters long'],
       select: false,
     },
     profileImage: {
@@ -47,6 +47,32 @@ const driverSchema = new mongoose.Schema(
       type: String,
       default: null,
       trim: true,
+    },
+    city: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    address: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    vehicles: [
+      {
+        model: { type: String, required: true, trim: true },
+        regNumber: { type: String, required: true, trim: true },
+        type: { type: String, default: 'Sedan', trim: true },
+        isPrimary: { type: Boolean, default: false },
+        isVerified: { type: Boolean, default: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    privacySettings: {
+      biometricLock: { type: Boolean, default: true },
+      backgroundLocation: { type: Boolean, default: true },
+      twoFactorAuth: { type: Boolean, default: true },
+      maskPhoneNumber: { type: Boolean, default: true },
     },
   },
   {
@@ -90,6 +116,15 @@ driverSchema.methods.toSafeObject = function () {
     profileImage: driverObj.profileImage !== undefined ? driverObj.profileImage : null,
     status: driverObj.status || 'offline',
     vehicleId: driverObj.vehicleId !== undefined ? driverObj.vehicleId : null,
+    city: driverObj.city !== undefined ? driverObj.city : null,
+    address: driverObj.address !== undefined ? driverObj.address : null,
+    vehicles: driverObj.vehicles || [],
+    privacySettings: driverObj.privacySettings || {
+      biometricLock: true,
+      backgroundLocation: true,
+      twoFactorAuth: true,
+      maskPhoneNumber: true,
+    },
     createdAt: driverObj.createdAt,
     updatedAt: driverObj.updatedAt,
   };

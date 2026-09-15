@@ -21,23 +21,41 @@ const connectDB = async () => {
     return false;
   }
 
-  try {
-    connectionStatus = 'connecting';
-    const conn = await mongoose.connect(uri, {
-      dbName: config.db.name,
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000,
-    });
+  let isConnecting = false;
+  const attemptConnect = async () => {
+    if (isConnecting || mongoose.connection.readyState === 1) return true;
+    try {
+      isConnecting = true;
+      connectionStatus = 'connecting';
+      const conn = await mongoose.connect(uri, {
+        dbName: config.db.name,
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 10000,
+      });
 
-    connectionStatus = 'connected';
-    console.log(`✅ [MongoDB] Connected successfully to host: ${conn.connection.host}`);
-    console.log(`📁 [MongoDB] Active Database: ${conn.connection.name}`);
-    return true;
-  } catch (error) {
-    connectionStatus = 'failed';
-    console.error(`❌ [MongoDB] Connection Error: ${error.message}`);
-    return false;
-  }
+      connectionStatus = 'connected';
+      console.log(`✅ [MongoDB] Connected successfully to host: ${conn.connection.host}`);
+      console.log(`📁 [MongoDB] Active Database: ${conn.connection.name}`);
+      return true;
+    } catch (error) {
+      connectionStatus = 'failed';
+      console.error(`❌ [MongoDB] Connection Error: ${error.message}`);
+      return false;
+    } finally {
+      isConnecting = false;
+    }
+  };
+
+  const initialSuccess = await attemptConnect();
+
+  // Continually monitor connection and auto-reconnect if lost or IP is pending
+  setInterval(async () => {
+    if (mongoose.connection.readyState !== 1 && connectionStatus !== 'misconfigured_credentials') {
+      await attemptConnect();
+    }
+  }, 4000);
+
+  return initialSuccess;
 };
 
 // Monitor connection events
@@ -53,7 +71,7 @@ mongoose.connection.on('error', (err) => {
 mongoose.connection.on('disconnected', () => {
   if (connectionStatus !== 'misconfigured_credentials') {
     connectionStatus = 'disconnected';
-    console.warn('⚠️ [MongoDB] Disconnected from database.');
+    console.warn('⚠️ [MongoDB] Disconnected from database. Auto-reconnect active...');
   }
 });
 

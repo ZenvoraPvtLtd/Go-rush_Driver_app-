@@ -16,7 +16,8 @@ class OtpVerificationLivenessScreen extends StatefulWidget {
 }
 
 class _OtpVerificationLivenessScreenState extends State<OtpVerificationLivenessScreen> {
-  final List<String> _otpDigits = ['4', '8', '9', '2', '0', '1'];
+  // 6 digits matching reference Phone 5
+  final List<String> _otpDigits = ['5', '8', '2', '4', '9', '1'];
 
   @override
   Widget build(BuildContext context) {
@@ -32,48 +33,103 @@ class _OtpVerificationLivenessScreenState extends State<OtpVerificationLivenessS
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 10),
 
-              const Text(
-                'Verify Your Number',
-                style: TextStyle(
-                  color: QuickServeColors.textDark,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+              // ID Card graphic with green checkmark
+              Center(
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: QuickServeColors.primaryBlue.withOpacity(0.2), width: 2),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(
+                        Icons.badge_outlined,
+                        size: 48,
+                        color: QuickServeColors.primaryBlue,
+                      ),
+                      Positioned(
+                        right: 18,
+                        bottom: 18,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check_circle,
+                            color: QuickServeColors.statusGreen,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Title matching reference Phone 5
+              const Center(
+                child: Text(
+                  'OTP Verification',
+                  style: TextStyle(
+                    color: QuickServeColors.textDark,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ),
 
               const SizedBox(height: 8),
 
-              const Text(
-                'Enter the 6-digit verification code sent to\n+91 98765 43210',
-                style: TextStyle(
-                  color: QuickServeColors.textSecondary,
-                  fontSize: 14,
-                  height: 1.4,
+              const Center(
+                child: Text(
+                  'Enter the 6-digit code sent to your\nregistered mobile number',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: QuickServeColors.textSecondary,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 36),
+              const SizedBox(height: 32),
 
-              // 6 Square OTP Boxes
+              // 6 Distinct Rounded OTP Digit Boxes matching reference Phone 5
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (index) {
                   return Container(
-                    width: 48,
+                    width: 46,
                     height: 54,
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: index < 4 ? QuickServeColors.primaryOrange : QuickServeColors.borderLight,
-                        width: index < 4 ? 1.5 : 1.0,
+                        color: QuickServeColors.primaryBlue.withOpacity(0.4),
+                        width: 1.3,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: Text(
@@ -91,7 +147,7 @@ class _OtpVerificationLivenessScreenState extends State<OtpVerificationLivenessS
 
               const SizedBox(height: 24),
 
-              // Resend Timer
+              // Resend Timer Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -99,12 +155,15 @@ class _OtpVerificationLivenessScreenState extends State<OtpVerificationLivenessS
                     "Didn't receive code? ",
                     style: TextStyle(color: QuickServeColors.textSecondary, fontSize: 13),
                   ),
-                  const Text(
-                    'Resend in 00:45',
-                    style: TextStyle(
-                      color: QuickServeColors.primaryOrange,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
+                  GestureDetector(
+                    onTap: () {},
+                    child: const Text(
+                      'Resend in 00:59',
+                      style: TextStyle(
+                        color: QuickServeColors.primaryBlue,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -112,19 +171,34 @@ class _OtpVerificationLivenessScreenState extends State<OtpVerificationLivenessS
 
               const SizedBox(height: 36),
 
-              // Orange Verify CTA Button
+              // Royal Cobalt Blue Verify CTA Button
               ElevatedButton(
                 onPressed: widget.onVerifySuccess,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: QuickServeColors.primaryOrange,
+                  backgroundColor: QuickServeColors.primaryBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
+                  elevation: 2,
+                  shadowColor: QuickServeColors.primaryBlue.withOpacity(0.35),
                 ),
                 child: const Text(
-                  'Verify & Continue',
+                  'Verify',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Bottom Security Badge
+              const Center(
+                child: Text(
+                  'GoRush 100% Secure Verification • Encrypted',
+                  style: TextStyle(
+                    color: QuickServeColors.textMuted,
+                    fontSize: 11,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],

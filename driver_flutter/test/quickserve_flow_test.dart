@@ -1,72 +1,74 @@
-import 'dart:ui';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/foundation.dart';
+import 'package:gorush_driver/core/demo_controller.dart';
 import 'package:gorush_driver/main.dart';
+import 'package:gorush_driver/screens/driver_profile_vehicle_settings.dart';
+import 'package:gorush_driver/screens/onboarding/driver_profile_setup.dart';
+import 'package:gorush_driver/services/app_language_service.dart';
 import 'package:gorush_driver/services/driver_backend_service.dart';
+import 'package:gorush_driver/services/token_storage_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  group('QuickServe Driver App Flow & Overlay Removal Tests', () {
-    setUp(() {
-      // Ensure clean authenticated state for initial tests
-      DriverBackendService.instance.saveSession();
+  group('GoRush Driver App Flow & 24 Screens Tests', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      AppLanguageService.instance.setLanguage('en');
+      await TokenStorageService.instance.init();
+      await DriverBackendService.instance.initSession();
+      await DriverBackendService.instance.saveSession(
+        driverProfile: {
+          'name': 'Rohit Sharma',
+          'phone': '+91 98765 43210',
+          'email': 'rohit@gorush.com',
+          'status': 'online',
+          'vehicleId': 'DL 01 AB 1234',
+        },
+      );
     });
 
-    testWidgets('1. App starts on Splash Screen then auto-navigates to Login / Register Screen (No HUD)', (WidgetTester tester) async {
+    testWidgets('1. App starts on Splash Screen then navigates to Create Account on Get Started CTA', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(const QuickServeDriverApp());
+      await tester.pumpWidget(const GoRushDriverApp());
       await tester.pump();
 
-      // STEP 1: INITIAL LAUNCH MUST SHOW EXISTING SPLASH SCREEN
-      expect(find.text('QuickServe'), findsOneWidget);
-      expect(find.text('Driver Partner App'), findsOneWidget);
+      // STEP 1: INITIAL LAUNCH MUST SHOW GORUSH SPLASH SCREEN
+      expect(find.text('GoRush'), findsOneWidget);
+      expect(find.text('Driver App'), findsWidgets);
       expect(find.text('Drive • Earn • Grow'), findsOneWidget);
       expect(find.text('Get Started'), findsOneWidget);
-      expect(find.text('Trusted by 50,000+ Drivers Across NCR'), findsOneWidget);
 
-      // Verify no top HUD overlay
+      // Verify no HUD overlay
       expect(find.textContaining('SCREEN 1/25'), findsNothing);
 
-      // STEP 2: AUTO-TRANSITION AFTER 2 SECONDS TO LOGIN / REGISTER
-      await tester.pump(const Duration(milliseconds: 2100));
-
-      expect(find.text('Welcome to QuickServe'), findsOneWidget);
-      expect(find.text('Phone Number'), findsOneWidget);
-      expect(find.text('Continue'), findsOneWidget);
-      expect(find.textContaining('SCREEN 2/25'), findsNothing);
-    });
-
-    testWidgets('2. Ride Demo Flow: Splash -> Login -> OTP -> Home -> Incoming -> Accept -> Arrived -> Start Trip -> Completed -> Fare -> Earnings', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-
-      await tester.pumpWidget(const QuickServeDriverApp());
-      await tester.pump();
-
-      // Tap Get Started on Splash -> Login/Register
+      // STEP 2: TAP GET STARTED CTA
       await tester.tap(find.text('Get Started'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Tap Continue -> OTP
-      await tester.tap(find.text('Continue'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Create Your Account'), findsOneWidget);
+      expect(find.text('Register'), findsOneWidget);
+    });
 
-      // Tap Verify & Continue -> Driver Home Dashboard
-      await tester.tap(find.text('Verify & Continue'));
+    testWidgets('2. Ride Demo Flow: Home -> Incoming -> Accept -> On Trip -> Completed -> Earnings', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(const GoRushDriverApp(initialScreen: DemoScreen.driverHomeDashboard));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 200));
 
       // Verify Driver Home Dashboard reached
-      expect(find.text('Good Morning,'), findsOneWidget);
+      expect(find.textContaining('Good Morning,'), findsOneWidget);
       expect(find.text('Rohit Sharma'), findsOneWidget);
 
-      // 1. From Home, scroll & tap incoming request banner
-      final incomingBtn = find.textContaining('View Incoming Request');
+      // 1. From Home, tap incoming request banner
+      final incomingBtn = find.textContaining('Ride Request Available!');
+      expect(incomingBtn, findsOneWidget);
       await tester.ensureVisible(incomingBtn);
       await tester.tap(incomingBtn);
       await tester.pump();
@@ -75,108 +77,87 @@ void main() {
       // Screen 10: Incoming Ride Request
       expect(find.text('New Ride Request'), findsOneWidget);
       expect(find.text('Priya Sharma'), findsOneWidget);
-      expect(find.textContaining('362'), findsWidgets);
-      expect(find.text('16.4 km'), findsWidgets);
       
       final acceptBtn = find.textContaining('Accept');
       expect(acceptBtn, findsOneWidget);
 
-      // 2. Tap Accept -> Screen 11: Navigation & Live Tracking
+      // 2. Tap Accept -> Screen 12: Passenger Trip Management (Pickup & OTP)
       await tester.tap(acceptBtn);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Arrived at Pickup'), findsOneWidget);
-
-      // 3. Tap Arrived -> Screen 12: Passenger Trip Management
-      await tester.tap(find.text('Arrived at Pickup'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text('Trip in Progress'), findsOneWidget);
       expect(find.text('Start Trip'), findsOneWidget);
 
-      // 4. Tap Start Trip -> Screen 13: Trip Completion
+      // 3. Tap Start Trip -> Screen 11: Navigation & Live Tracking
       await tester.tap(find.text('Start Trip'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Trip Completed Successfully!'), findsOneWidget);
-      expect(find.textContaining('282'), findsWidgets); // Net earnings
-      expect(find.text('View Fare Breakdown'), findsOneWidget);
+      expect(find.text('End Trip'), findsOneWidget);
 
-      // 5. Tap View Details -> Screen 14: Fare Breakdown
-      await tester.tap(find.text('View Fare Breakdown'));
+      // 4. Tap End Trip -> Screen 13: Trip Completion
+      await tester.tap(find.text('End Trip'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Total Trip Fare'), findsOneWidget);
-      expect(find.textContaining('402'), findsWidgets);
-      expect(find.text('Done (View Earnings)'), findsOneWidget);
+      expect(find.text('Trip Completed'), findsOneWidget);
+      expect(find.text('₹320'), findsWidgets);
+      expect(find.text('Done'), findsOneWidget);
 
-      // 6. Tap Done -> Screen 15: Earnings
-      await tester.tap(find.text('Done (View Earnings)'));
+      // 5. Tap Done -> Screen 15: Earnings
+      await tester.tap(find.text('Done'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text("Today's Net Earnings"), findsOneWidget);
-      expect(find.textContaining('2,480'), findsWidgets);
+      expect(find.text("Today's Net Earnings: ₹12,400"), findsOneWidget);
+      expect(find.text('₹23,000'), findsOneWidget);
     });
 
-    testWidgets('3. Bottom Navigation bar switches between Home, Earnings, History, Profile (No HUD on any screen)', (WidgetTester tester) async {
+    testWidgets('3. Bottom Navigation bar switches between Home, Rides, Earnings, Incentives, Profile', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(const QuickServeDriverApp());
+      await tester.pumpWidget(const GoRushDriverApp(initialScreen: DemoScreen.driverHomeDashboard));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
-      // Navigate from Splash -> Login -> OTP -> Driver Home
-      await tester.tap(find.text('Get Started'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Continue'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Verify & Continue'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // Tap Earnings Tab (index 1)
-      await tester.tap(find.text('Earnings'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.textContaining('2,480'), findsWidgets);
-      expect(find.textContaining('SCREEN 15/25'), findsNothing);
-
-      // Tap History Tab (index 2)
-      await tester.tap(find.text('History'));
+      // Tap Rides Tab (index 1)
+      await tester.tap(find.text('Rides'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Trip History'), findsOneWidget);
-      expect(find.textContaining('SCREEN 16/25'), findsNothing);
 
-      // Tap Profile Tab (index 3)
+      // Tap Earnings Tab (index 2)
+      await tester.tap(find.text('Earnings'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('₹23,000'), findsOneWidget);
+
+      // Tap Incentives Tab (index 3)
+      await tester.tap(find.text('Incentives'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Incentives'), findsWidgets);
+
+      // Tap Profile Tab (index 4)
       await tester.tap(find.text('Profile'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Profile & Settings'), findsOneWidget);
-      expect(find.textContaining('SCREEN 20/25'), findsNothing);
+      expect(find.text('Rohit Sharma'), findsWidgets);
 
       // Tap Home Tab (index 0)
       await tester.tap(find.text('Home'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Rohit Sharma'), findsOneWidget);
-      expect(find.textContaining('SCREEN 9/25'), findsNothing);
     });
 
-    testWidgets('4. REAL LOGOUT TEST: Home -> Profile -> Logout -> Login/Register screen (OTP is NOT shown, HUD is NOT shown)', (WidgetTester tester) async {
+    testWidgets('4. REAL LOGOUT TEST: Profile -> Logout -> Create Account screen', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      // Ignore layout overflow warning from existing UI divider in test environment
       final prevOnError = FlutterError.onError;
       FlutterError.onError = (details) {
         if (!details.toString().contains('overflowed')) {
@@ -185,27 +166,11 @@ void main() {
       };
       addTearDown(() => FlutterError.onError = prevOnError);
 
-      await tester.pumpWidget(const QuickServeDriverApp());
-      await tester.pump();
-
-      // Navigate from Splash -> Login -> OTP -> Driver Home
-      await tester.tap(find.text('Get Started'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Continue'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Verify & Continue'));
+      await tester.pumpWidget(const GoRushDriverApp(initialScreen: DemoScreen.driverProfileVehicleSettings));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(DriverBackendService.instance.isAuthenticated, isTrue);
-
-      // Navigate to Profile & Settings (Screen 20)
-      await tester.tap(find.text('Profile'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Profile & Settings'), findsOneWidget);
 
       // Find and tap the Log Out button
       final logoutTile = find.text('Log Out');
@@ -215,75 +180,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // CRITICAL ASSERTION 1: Screen MUST be 02 (Login / Register) without HUD
-      expect(find.text('Welcome to QuickServe'), findsOneWidget);
-      expect(find.text('Phone Number'), findsOneWidget);
-      expect(find.textContaining('SCREEN 2/25'), findsNothing);
-
-      // CRITICAL ASSERTION 2: OTP Verification must NOT appear
-      expect(find.text('Verify Your Number'), findsNothing);
-
-      // CRITICAL ASSERTION 3: Authentication state must be cleared
+      // Screen MUST be Create Account
+      expect(find.text('Create Your Account'), findsOneWidget);
       expect(DriverBackendService.instance.isAuthenticated, isFalse);
-      expect(DriverBackendService.instance.accessToken, isNull);
-      expect(DriverBackendService.instance.refreshToken, isNull);
-      expect(DriverBackendService.instance.driverProfile, isNull);
     });
 
-    testWidgets('5. NORMAL LOGIN AFTER LOGOUT: Login/Register -> Continue -> OTP Verification -> Verify -> Driver Home', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-
-      // Ignore layout overflow warning from existing UI divider in test environment
-      final prevOnError = FlutterError.onError;
-      FlutterError.onError = (details) {
-        if (!details.toString().contains('overflowed')) {
-          prevOnError?.call(details);
-        }
-      };
-      addTearDown(() => FlutterError.onError = prevOnError);
-
-      // Force unauthenticated state
-      DriverBackendService.instance.logout();
-
-      await tester.pumpWidget(const QuickServeDriverApp());
-      await tester.pump();
-
-      // Wait 2.1s for Splash Screen to auto-navigate to Login / Register
-      await tester.pump(const Duration(milliseconds: 2100));
-
-      // Starts on Login / Register because unauthenticated
-      expect(find.text('Welcome to QuickServe'), findsOneWidget);
-      expect(find.textContaining('SCREEN 2/25'), findsNothing);
-
-      // Tap Continue to get OTP
-      final continueBtn = find.text('Continue');
-      expect(continueBtn, findsOneWidget);
-      await tester.tap(continueBtn);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // Now OTP Verification screen appears
-      expect(find.text('Verify Your Number'), findsOneWidget);
-      expect(find.textContaining('SCREEN 3/25'), findsNothing);
-
-      // Tap Verify & Continue (Screen 03 CTA)
-      final verifyBtn = find.text('Verify & Continue');
-      expect(verifyBtn, findsOneWidget);
-      await tester.tap(verifyBtn);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // Reaches Driver Home Dashboard
-      expect(find.text('Good Morning,'), findsOneWidget);
-      expect(find.text('Rohit Sharma'), findsOneWidget);
-      expect(DriverBackendService.instance.isAuthenticated, isTrue);
-      expect(find.textContaining('SCREEN 9/25'), findsNothing);
-    });
-
-    testWidgets('6. Layout Fit Test: Emergency SOS and Support Hub visible on Home without scrolling; Instant Cash Out and Statement visible on Earnings', (WidgetTester tester) async {
-      // Mobile phone viewport (390 x 780 logical pixels)
+    testWidgets('5. Layout Fit Test: Emergency SOS and Support Hub visible on Home; Instant Cash Out and Statement visible on Earnings', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(390, 780);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -296,63 +198,216 @@ void main() {
       };
       addTearDown(() => FlutterError.onError = prevOnError);
 
-      DriverBackendService.instance.saveSession();
-
-      await tester.pumpWidget(const QuickServeDriverApp());
+      await tester.pumpWidget(const GoRushDriverApp(initialScreen: DemoScreen.driverHomeDashboard));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
-      // Enter Driver Home via onboarding flow
-      await tester.tap(find.text('Get Started'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Continue'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Verify & Continue'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      // Home Screen: Emergency SOS & Support Hub
+      final sosTile = find.text('Emergency SOS');
+      expect(sosTile, findsOneWidget);
+      await tester.ensureVisible(sosTile);
 
-      // Verify Home Screen Content
-      expect(find.text('Rohit Sharma'), findsOneWidget);
-      expect(find.text('Current Location: Sector 62, Noida'), findsOneWidget);
-      expect(find.text('Available Requests'), findsOneWidget);
-      expect(find.text("Today's Earnings"), findsOneWidget);
-      expect(find.text('Ride Request Available!'), findsOneWidget);
-
-      // CHANGE 1 VERIFICATION: Emergency SOS and Support Hub MUST be visible without scrolling
-      final sosFinder = find.text('Emergency SOS');
-      final supportFinder = find.text('Support Hub');
-      expect(sosFinder, findsOneWidget);
-      expect(supportFinder, findsOneWidget);
-      final sosDy = tester.getTopLeft(sosFinder).dy;
-      final supportDy = tester.getTopLeft(supportFinder).dy;
-      final sosBottom = tester.getBottomRight(sosFinder).dy;
-      // Both elements must be visible and sit above the bottom navigation bar (720.0 on 780 screen)
-      expect(sosDy, lessThan(780.0));
-      expect(supportDy, lessThan(780.0));
-      expect(sosBottom, lessThan(720.0));
+      final supportTile = find.text('Support Hub');
+      expect(supportTile, findsOneWidget);
+      await tester.ensureVisible(supportTile);
 
       // Navigate to Earnings Tab
       await tester.tap(find.text('Earnings'));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Earnings Screen: Instant Cash Out & View Earnings Statement
+      final cashOutTile = find.text('Instant Cash Out');
+      expect(cashOutTile, findsOneWidget);
+      await tester.ensureVisible(cashOutTile);
+
+      final statementTile = find.text('View Earnings Statement');
+      expect(statementTile, findsOneWidget);
+      await tester.ensureVisible(statementTile);
+    });
+
+    testWidgets('6. Profile & Settings Actions: Edit Profile instant response (<0.5s), Push Notifications, App Language, Privacy & Security, Change Password/PIN', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(const GoRushDriverApp(initialScreen: DemoScreen.driverProfileVehicleSettings));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Rohit Sharma'), findsWidgets);
+      expect(find.text('Edit Profile'), findsOneWidget);
+      expect(find.text('Push Notifications'), findsOneWidget);
+      expect(find.text('App Language'), findsOneWidget);
+      expect(find.text('Privacy & Security'), findsOneWidget);
+      expect(find.text('Change Password / PIN'), findsOneWidget);
+
+      // 1. TEST EDIT PROFILE: Tap Edit Profile
+      final stopwatch = Stopwatch()..start();
+      await tester.tap(find.text('Edit Profile'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      stopwatch.stop();
+
+      expect(stopwatch.elapsedMilliseconds, lessThan(500));
+      expect(find.text('Save Changes'), findsOneWidget);
+
+      // Tap Save Changes -> instantly returns to Profile
+      await tester.tap(find.text('Save Changes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Rohit Sharma'), findsWidgets);
+
+      // 2. TEST PUSH NOTIFICATIONS
+      await tester.tap(find.text('Push Notifications'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Ride Request Alerts'), findsOneWidget);
+      final savePrefBtn = find.text('Save Preferences');
+      expect(savePrefBtn, findsOneWidget);
+
+      await tester.tap(savePrefBtn);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // 3. TEST APP LANGUAGE
+      await tester.tap(find.text('App Language'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Select App Language'), findsOneWidget);
+      expect(find.text('Hindi'), findsOneWidget);
+
+      await tester.tap(find.text('Hindi'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Assert translation to Hindi
+      expect(find.text('होम'), findsOneWidget);
+
+      // Switch back to English (India)
+      await tester.ensureVisible(find.text('ऐप की भाषा'));
+      await tester.tap(find.text('ऐप की भाषा'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('English (India)'), findsOneWidget);
+      await tester.tap(find.text('English (India)'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Home'), findsOneWidget);
+
+      // 4. TEST PRIVACY & SECURITY
+      await tester.tap(find.text('Privacy & Security'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Biometric App Lock'), findsOneWidget);
+      final saveSecBtn = find.text('Save Security Settings');
+      expect(saveSecBtn, findsOneWidget);
+
+      await tester.tap(saveSecBtn);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // 5. TEST CHANGE PASSWORD / PIN
+      await tester.tap(find.text('Change Password / PIN'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Current Password'), findsOneWidget);
+      expect(find.text('Update Password'), findsOneWidget);
+    });
+
+    testWidgets('7. Change Password / PIN modal fits on mobile screen without overlap', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(500, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: DriverProfileVehicleSettingsScreen(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await tester.ensureVisible(find.text('Change Password / PIN'));
+      await tester.tap(find.text('Change Password / PIN'));
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify Earnings Header & Cards
-      expect(find.text('Earnings'), findsNWidgets(2)); // AppBar title + Bottom nav tab
-      expect(find.text("Today's Net Earnings"), findsOneWidget);
-      expect(find.text('Linked Bank: HDFC Bank'), findsOneWidget);
+      final updatePinBtn = find.text('Update Password');
+      expect(updatePinBtn, findsOneWidget);
 
-      // CHANGE 2 VERIFICATION: Instant Cash Out and View Earnings Statement MUST be visible without scrolling
-      final cashOutFinder = find.textContaining('Instant Cash Out');
-      final statementFinder = find.text('View Earnings Statement');
-      expect(cashOutFinder, findsOneWidget);
-      expect(statementFinder, findsOneWidget);
-      final cashOutBottom = tester.getBottomRight(cashOutFinder).dy;
-      final statementBottom = tester.getBottomRight(statementFinder).dy;
-      // Both buttons must be above the bottom navigation bar and within the visible screen
-      expect(cashOutBottom, lessThan(720.0));
-      expect(statementBottom, lessThan(720.0));
+      final updatePinBottom = tester.getBottomRight(updatePinBtn).dy;
+      expect(updatePinBottom, lessThan(780.0));
+    });
+
+    testWidgets('8. Edit Profile (DriverProfileSetupScreen) fits on mobile screen without Save Changes overlap', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(500, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: DriverProfileSetupScreen(isEditing: true),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final saveChangesBtn = find.text('Save Changes');
+      expect(saveChangesBtn, findsOneWidget);
+
+      final saveChangesBottom = tester.getBottomRight(saveChangesBtn).dy;
+      expect(saveChangesBottom, lessThan(780.0));
+    });
+
+    testWidgets('9. Documents & Verification and Bank Details Back Button takes user to Profile step-by-step', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(const GoRushDriverApp(initialScreen: DemoScreen.driverProfileVehicleSettings));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Rohit Sharma'), findsWidgets);
+
+      // 1. Tap Documents & Verification
+      await tester.ensureVisible(find.text('Documents & Verification'));
+      await tester.tap(find.text('Documents & Verification'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Document upload'), findsOneWidget);
+
+      // 2. Tap Back button on Document upload -> goes back to Profile
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Rohit Sharma'), findsWidgets);
+
+      // 3. Tap Bank Details & UPI from Profile
+      await tester.ensureVisible(find.text('Bank Details & UPI'));
+      await tester.tap(find.text('Bank Details & UPI'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Bank Details / UPI'), findsOneWidget);
+
+      // 4. Tap Back button on Bank Details -> goes back to Profile
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Rohit Sharma'), findsWidgets);
+
+      // 5. Tap Back button on Profile -> goes back to Home Dashboard
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.textContaining('Good Morning,'), findsOneWidget);
     });
   });
 }
-

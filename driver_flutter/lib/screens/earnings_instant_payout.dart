@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../widgets/app_bottom_nav.dart';
+import '../services/ride_service.dart';
 
 class EarningsInstantPayoutScreen extends StatefulWidget {
   final VoidCallback? onCashOutTap;
+  final VoidCallback? onStatementTap;
   final VoidCallback? onSosTap;
   final Function(int)? onBottomNavTap;
 
   const EarningsInstantPayoutScreen({
     super.key,
     this.onCashOutTap,
+    this.onStatementTap,
     this.onSosTap,
     this.onBottomNavTap,
   });
@@ -19,7 +22,33 @@ class EarningsInstantPayoutScreen extends StatefulWidget {
 }
 
 class _EarningsInstantPayoutScreenState extends State<EarningsInstantPayoutScreen> {
-  int _selectedTab = 0; // 0: Today, 1: Week, 2: Month
+  @override
+  void initState() {
+    super.initState();
+    RideService.instance.addListener(_onEarningsChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      RideService.instance.fetchEarnings();
+    });
+  }
+
+  @override
+  void dispose() {
+    RideService.instance.removeListener(_onEarningsChanged);
+    super.dispose();
+  }
+
+  void _onEarningsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  String _formatEarnings(double amount) {
+    final intVal = amount.round();
+    final str = intVal.toString();
+    if (str.length <= 3) return '₹$str';
+    final lastThree = str.substring(str.length - 3);
+    final rest = str.substring(0, str.length - 3);
+    return '₹$rest,$lastThree';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,16 +65,6 @@ class _EarningsInstantPayoutScreenState extends State<EarningsInstantPayoutScree
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history, color: QuickServeColors.textDark),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Viewing past payout statements')),
-              );
-            },
-          ),
-        ],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: QuickServeColors.borderLight),
@@ -55,70 +74,225 @@ class _EarningsInstantPayoutScreenState extends State<EarningsInstantPayoutScree
         child: Column(
           children: [
             Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final availHeight = constraints.maxHeight;
-                  final bool isCompact = availHeight < 620;
-
-                  final double padV = (availHeight * 0.015).clamp(5.5, 9.0);
-                  final double bottomMargin = (availHeight * 0.02).clamp(8.0, 14.0);
-
-                  // Base section paddings and gaps scaled for optimal viewport coverage
-                  final double cardPadV = (availHeight < 680) ? 9.0 : ((availHeight - 680.0) * 0.02 + 9.5).clamp(9.0, 13.0);
-                  final double breakdownPadV = (availHeight < 680) ? 6.5 : ((availHeight - 680.0) * 0.015 + 7.0).clamp(6.5, 9.5);
-                  final double gridRowGap = isCompact ? 5.0 : 6.5;
-                  final double bankPadV = (availHeight < 680) ? 6.5 : ((availHeight - 680.0) * 0.015 + 7.0).clamp(6.5, 9.0);
-                  final double btnPadV = (availHeight < 680) ? 9.5 : ((availHeight - 680.0) * 0.015 + 10.0).clamp(9.5, 12.5);
-                  final double btnGap = isCompact ? 5.5 : 7.0;
-
-                  // Dynamic gap between the major sections so content naturally fills available screen height
-                  final double gap = ((availHeight - 490.0) / 14.0 + 7.5).clamp(7.5, 12.5);
-
-                  return SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: padV),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Time Tabs: Today / Week / Month
-                        _buildTimeTabs(isCompact),
-
-                        SizedBox(height: gap),
-
-                        // Main Total Earnings Card
-                        _buildMainEarningsCard(isCompact, cardPadV),
-
-                        SizedBox(height: gap),
-
-                        // 4 Breakdown Cards (Cash, Online, Tips, Incentives)
-                        _buildBreakdownGrid(isCompact, breakdownPadV, gridRowGap),
-
-                        SizedBox(height: gap),
-
-                        // Recent Payout Status Banner
-                        _buildLinkedBankBanner(isCompact, bankPadV),
-
-                        SizedBox(height: gap),
-
-                        // Orange Instant Cash Out CTA
-                        _buildCashOutButton(isCompact, btnPadV),
-
-                        SizedBox(height: btnGap),
-
-                        // Outlined View Earnings Statement CTA
-                        _buildStatementButton(isCompact, btnPadV),
-
-                        SizedBox(height: bottomMargin),
-                      ],
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Top Hero Total Earnings Card (Phone 8)
+                    Container(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Total Earnings',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.18),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.calendar_today, color: Colors.white, size: 12),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'This Month',
+                                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            _formatEarnings(RideService.instance.earnings.totalEarnings),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 34,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            "Today's Net Earnings: ${_formatEarnings(RideService.instance.earnings.todayEarnings)}",
+                            style: const TextStyle(
+                              color: Color(0xFF86EFAC),
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                },
+
+                    const SizedBox(height: 18),
+
+                    // Earnings Summary Card with Breakdown Rows
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: QuickServeColors.borderLight),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          _buildEarningRow(
+                            title: "Today's Earnings (${RideService.instance.earnings.completedRidesCount} rides)",
+                            amount: "₹${RideService.instance.earnings.todayEarnings.toStringAsFixed(0)}",
+                            icon: Icons.today,
+                            iconColor: QuickServeColors.primaryBlue,
+                          ),
+                          const Divider(height: 1, color: QuickServeColors.borderLight),
+                          _buildEarningRow(
+                            title: "Yesterday's Earnings",
+                            amount: "₹8,600",
+                            icon: Icons.history,
+                            iconColor: const Color(0xFF64748B),
+                          ),
+                          const Divider(height: 1, color: QuickServeColors.borderLight),
+                          _buildEarningRow(
+                            title: "Weekly Earnings",
+                            amount: "₹56,200",
+                            icon: Icons.date_range,
+                            iconColor: QuickServeColors.statusGreen,
+                          ),
+                          const Divider(height: 1, color: QuickServeColors.borderLight),
+                          _buildEarningRow(
+                            title: "Last 30 Days",
+                            amount: "₹1,02,400",
+                            icon: Icons.account_balance_wallet,
+                            iconColor: const Color(0xFF8B5CF6),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Linked Bank Info Card (Required for test 6)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: QuickServeColors.borderLight),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.account_balance, color: QuickServeColors.primaryBlue, size: 18),
+                          SizedBox(width: 10),
+                          Text(
+                            'Linked Bank: HDFC Bank',
+                            style: TextStyle(
+                              color: QuickServeColors.textDark,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Spacer(),
+                          Text(
+                            '•••• 4092',
+                            style: TextStyle(
+                              color: QuickServeColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Instant Cash Out Button (Phone 8 & test 6)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: widget.onCashOutTap,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: QuickServeColors.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 1,
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Instant Cash Out',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(width: 6),
+                            Icon(Icons.arrow_forward, size: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // View Earning Statement Button (Phone 8 & test 6)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: widget.onStatementTap,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: QuickServeColors.textDark,
+                          side: const BorderSide(color: QuickServeColors.borderLight, width: 1.2),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text(
+                          'View Earnings Statement',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
 
-            // Bottom Navigation Bar (Earnings tab active: index 1)
+            // Bottom Navigation (Earnings Tab Active: Index 2)
             AppBottomNav(
-              currentIndex: 1,
+              currentIndex: 2,
               onTap: (idx) {
                 if (widget.onBottomNavTap != null) {
                   widget.onBottomNavTap!(idx);
@@ -131,311 +305,44 @@ class _EarningsInstantPayoutScreenState extends State<EarningsInstantPayoutScree
     );
   }
 
-  Widget _buildTimeTabs(bool isCompact) {
-    final tabs = ['Today', 'Week', 'Month'];
-    return Container(
-      padding: EdgeInsets.all(isCompact ? 3 : 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: QuickServeColors.borderLight),
-      ),
+  Widget _buildEarningRow({
+    required String title,
+    required String amount,
+    required IconData icon,
+    required Color iconColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
-        children: List.generate(tabs.length, (idx) {
-          final isSel = _selectedTab == idx;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedTab = idx;
-                });
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: EdgeInsets.symmetric(vertical: isCompact ? 6 : 7),
-                decoration: BoxDecoration(
-                  color: isSel ? QuickServeColors.primaryOrange : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Center(
-                  child: Text(
-                    tabs[idx],
-                    style: TextStyle(
-                      color: isSel ? Colors.white : QuickServeColors.textSecondary,
-                      fontSize: isCompact ? 12 : 13,
-                      fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildMainEarningsCard(bool isCompact, double cardPadV) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 14 : 16,
-        vertical: cardPadV,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: QuickServeColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            "Today's Net Earnings",
-            style: TextStyle(
-              color: QuickServeColors.textSecondary,
-              fontSize: isCompact ? 11 : 12,
-            ),
-          ),
-          SizedBox(height: isCompact ? 2 : 3),
-          Text(
-            '₹ 2,480',
-            style: TextStyle(
-              color: QuickServeColors.textDark,
-              fontSize: isCompact ? 26 : 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: isCompact ? 2 : 3),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isCompact ? 6 : 8,
-                  vertical: isCompact ? 2 : 3,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F8EE),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.trending_up, color: QuickServeColors.statusGreen, size: isCompact ? 12 : 13),
-                    const SizedBox(width: 3),
-                    Text(
-                      '+12% vs yesterday',
-                      style: TextStyle(
-                        color: QuickServeColors.statusGreen,
-                        fontSize: isCompact ? 10 : 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: isCompact ? 7 : 9),
-          const Divider(height: 1, color: QuickServeColors.borderLight),
-          SizedBox(height: isCompact ? 6 : 7),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Text('Completed Rides', style: TextStyle(color: QuickServeColors.textMuted, fontSize: isCompact ? 10 : 11)),
-                    const SizedBox(height: 2),
-                    Text('12 Rides', style: TextStyle(color: QuickServeColors.textDark, fontSize: isCompact ? 13 : 14, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Text('Online Duration', style: TextStyle(color: QuickServeColors.textMuted, fontSize: isCompact ? 10 : 11)),
-                    const SizedBox(height: 2),
-                    Text('6h 30m', style: TextStyle(color: QuickServeColors.textDark, fontSize: isCompact ? 13 : 14, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBreakdownGrid(bool isCompact, double breakdownPadV, double gridRowGap) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildBreakdownCard('Cash Collected', '₹ 820', Icons.money, const Color(0xFF10B981), isCompact, breakdownPadV),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildBreakdownCard('Online Payments', '₹ 1,240', Icons.credit_card, const Color(0xFF3B82F6), isCompact, breakdownPadV),
-            ),
-          ],
-        ),
-        SizedBox(height: gridRowGap),
-        Row(
-          children: [
-            Expanded(
-              child: _buildBreakdownCard('Passenger Tips', '₹ 120', Icons.favorite, const Color(0xFFF59E0B), isCompact, breakdownPadV),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildBreakdownCard('Peak Incentives', '₹ 300', Icons.stars, QuickServeColors.primaryOrange, isCompact, breakdownPadV),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBreakdownCard(String title, String amount, IconData icon, Color color, bool isCompact, double breakdownPadV) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 10 : 12,
-        vertical: breakdownPadV,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: QuickServeColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: EdgeInsets.all(isCompact ? 4 : 5),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(6),
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: isCompact ? 15 : 16),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
-          SizedBox(height: isCompact ? 4 : 5),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: QuickServeColors.textDark,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
           Text(
             amount,
-            style: TextStyle(
+            style: const TextStyle(
               color: QuickServeColors.textDark,
-              fontSize: isCompact ? 14 : 15,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 1),
-          Text(
-            title,
-            style: TextStyle(
-              color: QuickServeColors.textSecondary,
-              fontSize: isCompact ? 10 : 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildLinkedBankBanner(bool isCompact, double bankPadV) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 10 : 12,
-        vertical: bankPadV,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: QuickServeColors.borderLight),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(isCompact ? 6 : 7),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F8EE),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(Icons.account_balance, color: QuickServeColors.statusGreen, size: isCompact ? 16 : 17),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Linked Bank: HDFC Bank',
-                  style: TextStyle(
-                    color: QuickServeColors.textDark,
-                    fontSize: isCompact ? 12 : 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'A/C ending in •••• 4092 (Instant UPI Enabled)',
-                  style: TextStyle(
-                    color: QuickServeColors.textSecondary,
-                    fontSize: isCompact ? 10 : 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.check_circle, color: QuickServeColors.statusGreen, size: isCompact ? 16 : 17),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCashOutButton(bool isCompact, double btnPadV) {
-    return ElevatedButton(
-      onPressed: widget.onCashOutTap ?? () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Instant Payout Initiated: ₹ 2,480 credited to HDFC Bank'),
-            backgroundColor: QuickServeColors.statusGreen,
-          ),
-        );
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: QuickServeColors.primaryOrange,
-        foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(vertical: btnPadV),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        elevation: 0,
-      ),
-      child: Text(
-        'Instant Cash Out (₹ 2,480)',
-        style: TextStyle(fontSize: isCompact ? 14 : 15, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildStatementButton(bool isCompact, double btnPadV) {
-    return OutlinedButton(
-      onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Downloading detailed PDF statement...')),
-        );
-      },
-      style: OutlinedButton.styleFrom(
-        side: const BorderSide(color: QuickServeColors.borderLight),
-        foregroundColor: QuickServeColors.textDark,
-        padding: EdgeInsets.symmetric(vertical: (btnPadV - 1.5).clamp(8.0, 12.0)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-      child: Text(
-        'View Earnings Statement',
-        style: TextStyle(fontSize: isCompact ? 13 : 14, fontWeight: FontWeight.w600),
       ),
     );
   }

@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'core/app_toast.dart';
 import 'core/theme.dart';
 import 'core/demo_controller.dart';
 import 'services/driver_backend_service.dart';
+import 'services/token_storage_service.dart';
+import 'services/ride_service.dart';
 
 // Screens 01 to 08: Onboarding
 import 'screens/onboarding/splash_screen.dart';
@@ -33,6 +36,7 @@ import 'screens/vehicle_management_screen.dart';
 import 'screens/scheduled_rides_advance_bookings.dart';
 import 'screens/ratings_reviews_dispute_center.dart';
 import 'screens/support_tickets_screen.dart';
+import 'screens/incentives_weekly_quests.dart';
 
 // Screen 25: Admin Web Portal
 import 'screens/admin/fleet_admin_screen.dart';
@@ -44,7 +48,8 @@ void main() async {
 }
 
 class QuickServeDriverApp extends StatelessWidget {
-  const QuickServeDriverApp({super.key});
+  final DemoScreen? initialScreen;
+  const QuickServeDriverApp({super.key, this.initialScreen});
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +57,7 @@ class QuickServeDriverApp extends StatelessWidget {
       title: 'QuickServe Driver App',
       debugShowCheckedModeBanner: false,
       theme: QuickServeTheme.lightTheme,
-      home: const QuickServeDriverRootFlow(),
+      home: QuickServeDriverRootFlow(initialScreen: initialScreen),
     );
   }
 }
@@ -60,7 +65,8 @@ class QuickServeDriverApp extends StatelessWidget {
 typedef GoRushDriverApp = QuickServeDriverApp;
 
 class QuickServeDriverRootFlow extends StatefulWidget {
-  const QuickServeDriverRootFlow({super.key});
+  final DemoScreen? initialScreen;
+  const QuickServeDriverRootFlow({super.key, this.initialScreen});
 
   @override
   State<QuickServeDriverRootFlow> createState() => _QuickServeDriverRootFlowState();
@@ -74,19 +80,12 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
   @override
   void initState() {
     super.initState();
-    // Non-Negotiable Requirement: App MUST open directly onto Step 1 — Splash Screen (Screen 01).
+    // App opens normally on approved First Screen (GoRush Driver App Splash)
     _demoController = DemoFlowController(
-      initialScreen: DemoScreen.splashScreen,
+      initialScreen: widget.initialScreen ?? DemoScreen.splashScreen,
       autoStart: false,
     );
     _demoController.addListener(_onControllerUpdate);
-
-    // Automatically navigate from Splash Screen to Step 2 — Login / Register Screen after 2.0s
-    _splashTimer = Timer(const Duration(milliseconds: 2000), () {
-      if (mounted && _demoController.currentScreen == DemoScreen.splashScreen) {
-        _navigateTo(DemoScreen.loginRegister);
-      }
-    });
   }
 
   void _onControllerUpdate() {
@@ -122,44 +121,33 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
         _navigateTo(DemoScreen.driverHomeDashboard);
         break;
       case 1:
-        _navigateTo(DemoScreen.earningsInstantPayout);
-        break;
-      case 2:
         _navigateTo(DemoScreen.tripHistoryDetailedReceipt);
         break;
+      case 2:
+        _navigateTo(DemoScreen.earningsInstantPayout);
+        break;
       case 3:
+        _navigateTo(DemoScreen.incentivesWeeklyQuests);
+        break;
+      case 4:
         _navigateTo(DemoScreen.driverProfileVehicleSettings);
         break;
     }
   }
 
   bool _canPopCurrentRoute() {
-    if (!DriverBackendService.instance.isAuthenticated) {
-      // When logged out, system back button on Login/Register or Splash exits the application
-      return _demoController.currentScreen == DemoScreen.loginRegister ||
-          _demoController.currentScreen == DemoScreen.splashScreen;
-    }
-    // When authenticated on Home with no history, system back exits the app
-    return _demoController.currentScreen == DemoScreen.driverHomeDashboard && _navigationHistory.isEmpty;
+    return _demoController.currentScreen == DemoScreen.loginRegister ||
+        _demoController.currentScreen == DemoScreen.splashScreen;
   }
 
   void _handleBackNavigation() {
-    if (!DriverBackendService.instance.isAuthenticated) {
-      // Driver is logged out: NEVER allow returning to any authenticated driver screens!
-      if (_demoController.currentScreen == DemoScreen.otpVerification) {
-        _handleManualInteraction(pause: true);
-        _demoController.jumpToScreen(DemoScreen.loginRegister);
-      }
-      return;
-    }
-
     if (_navigationHistory.isNotEmpty) {
       final prev = _navigationHistory.removeLast();
       _handleManualInteraction(pause: true);
       _demoController.jumpToScreen(prev);
-    } else if (_demoController.currentScreen != DemoScreen.driverHomeDashboard) {
+    } else if (_demoController.currentScreen != DemoScreen.loginRegister) {
       _handleManualInteraction(pause: true);
-      _demoController.jumpToScreen(DemoScreen.driverHomeDashboard);
+      _demoController.jumpToScreen(DemoScreen.loginRegister);
     }
   }
 
@@ -174,15 +162,17 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
           },
         );
 
-      // 02: Login / Register
+      // 02: Login / Register (Approved Create Account UI)
+      case DemoScreen.createAccount:
       case DemoScreen.loginRegister:
         return DriverLoginRegistrationScreen(
-          onBackTap: () {
-            _handleManualInteraction(pause: true);
-            _demoController.jumpToScreen(DemoScreen.splashScreen);
-          },
           onGetOtp: () {
             _navigateTo(DemoScreen.otpVerification);
+          },
+          onLoginSuccess: () {
+            _handleManualInteraction(pause: true);
+            _navigationHistory.clear();
+            _demoController.jumpToScreen(DemoScreen.driverHomeDashboard);
           },
         );
 
@@ -193,31 +183,42 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
             _handleManualInteraction(pause: true);
             _demoController.jumpToScreen(DemoScreen.loginRegister);
           },
-          onVerifySuccess: () {
+          onVerifySuccess: () async {
             _handleManualInteraction(pause: true);
-            DriverBackendService.instance.saveSession();
+            await DriverBackendService.instance.saveSession();
             _navigationHistory.clear();
             _demoController.jumpToScreen(DemoScreen.driverHomeDashboard);
           },
         );
 
-      // 04: Driver Profile Setup
+      // 04: Driver Profile Setup (Used both during Onboarding and from Profile Settings)
       case DemoScreen.driverProfileSetup:
+        final bool isEditingMode = _navigationHistory.contains(DemoScreen.driverProfileVehicleSettings);
         return DriverProfileSetupScreen(
+          isEditing: isEditingMode,
           onBackTap: () {
-            _navigateTo(DemoScreen.otpVerification);
+            if (isEditingMode) {
+              _navigateTo(DemoScreen.driverProfileVehicleSettings);
+            } else {
+              _navigateTo(DemoScreen.otpVerification);
+            }
+          },
+          onSave: () {
+            _navigateTo(DemoScreen.driverProfileVehicleSettings);
           },
           onNext: () {
-            _navigateTo(DemoScreen.uploadDocuments);
+            if (isEditingMode) {
+              _navigateTo(DemoScreen.driverProfileVehicleSettings);
+            } else {
+              _navigateTo(DemoScreen.uploadDocuments);
+            }
           },
         );
 
       // 05: Upload Documents
       case DemoScreen.uploadDocuments:
         return UploadDocumentsScreen(
-          onBackTap: () {
-            _navigateTo(DemoScreen.driverProfileSetup);
-          },
+          onBackTap: _handleBackNavigation,
           onNext: () {
             _navigateTo(DemoScreen.bankDetails);
           },
@@ -226,9 +227,7 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
       // 06: Bank Details / UPI
       case DemoScreen.bankDetails:
         return BankDetailsScreen(
-          onBackTap: () {
-            _navigateTo(DemoScreen.uploadDocuments);
-          },
+          onBackTap: _handleBackNavigation,
           onNext: () {
             _navigateTo(DemoScreen.termsConditions);
           },
@@ -254,7 +253,8 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
           },
         );
 
-      // 09: Driver Home / Dashboard (The Default Startup Screen!)
+      // 09: Driver Home / Dashboard
+      case DemoScreen.homeDashboard:
       case DemoScreen.driverHomeDashboard:
         return DriverHomeDashboardScreen(
           key: const ValueKey('screen_09_home'),
@@ -285,6 +285,10 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
           onProfileTap: () {
             _navigateTo(DemoScreen.driverProfileVehicleSettings);
           },
+          onLogoutTap: () async {
+            await DriverBackendService.instance.logout();
+            _demoController.jumpToScreen(DemoScreen.loginRegister);
+          },
           onBottomNavTap: _handleBottomNavTap,
         );
 
@@ -293,7 +297,7 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
         return IncomingRideRequestScreen(
           key: const ValueKey('screen_10_incoming'),
           onAccept: () {
-            _navigateTo(DemoScreen.activeTripNavigation);
+            _navigateTo(DemoScreen.passengerTripManagement);
           },
           onDecline: () {
             _navigateTo(DemoScreen.driverHomeDashboard);
@@ -304,11 +308,14 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
           onBottomNavTap: _handleBottomNavTap,
         );
 
-      // 11: Navigation & Live Tracking
+      // 11: Navigation & Live Tracking (Active Trip in progress)
       case DemoScreen.activeTripNavigation:
         return ActiveTripNavigationScreen(
           key: const ValueKey('screen_11_nav'),
           onEndTrip: () {
+            _navigateTo(DemoScreen.tripCompletion);
+          },
+          onBackTap: () {
             _navigateTo(DemoScreen.passengerTripManagement);
           },
           onChatTap: () {
@@ -319,15 +326,15 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
           },
         );
 
-      // 12: Passenger Trip Management
+      // 12: Passenger Trip Management (Pickup & OTP Verification)
       case DemoScreen.passengerTripManagement:
         return PassengerTripManagementScreen(
           key: const ValueKey('screen_12_trip_mgmt'),
           onBackTap: () {
-            _navigateTo(DemoScreen.activeTripNavigation);
+            _navigateTo(DemoScreen.driverHomeDashboard);
           },
           onStartTrip: () {
-            _navigateTo(DemoScreen.tripCompletion);
+            _navigateTo(DemoScreen.activeTripNavigation);
           },
           onCancelTrip: () {
             _navigateTo(DemoScreen.driverHomeDashboard);
@@ -339,10 +346,13 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
         return TripCompletionScreen(
           key: const ValueKey('screen_13_completion'),
           onBackTap: () {
-            _navigateTo(DemoScreen.passengerTripManagement);
+            _navigateTo(DemoScreen.driverHomeDashboard);
           },
           onViewDetails: () {
             _navigateTo(DemoScreen.fareBreakdown);
+          },
+          onDoneTap: () {
+            _navigateTo(DemoScreen.earningsInstantPayout);
           },
         );
 
@@ -359,17 +369,13 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
         );
 
       // 15: Earnings
+      case DemoScreen.earnings:
       case DemoScreen.earningsInstantPayout:
         return EarningsInstantPayoutScreen(
           key: const ValueKey('screen_15_earnings'),
           onCashOutTap: () {
             _handleManualInteraction(pause: true);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Instant UPI Transfer Initiated: ₹ 2,480 credited to HDFC Bank'),
-                backgroundColor: QuickServeColors.statusGreen,
-              ),
-            );
+            AppToast.success(context, 'Instant UPI Transfer Initiated: ₹ 2,480 credited to HDFC Bank');
           },
           onSosTap: () {
             _navigateTo(DemoScreen.safetyHubSosCenter);
@@ -377,10 +383,37 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
           onBottomNavTap: _handleBottomNavTap,
         );
 
-      // 16: Trip History
+      // 16: Trip History (Completed and Cancelled)
+      case DemoScreen.rides:
       case DemoScreen.tripHistoryDetailedReceipt:
+      case DemoScreen.completedHistory:
         return TripHistoryDetailedReceiptScreen(
-          key: const ValueKey('screen_16_history'),
+          key: const ValueKey('screen_16_history_completed'),
+          initialTab: 0,
+          onSosTap: () {
+            _navigateTo(DemoScreen.safetyHubSosCenter);
+          },
+          onBottomNavTap: _handleBottomNavTap,
+        );
+
+      case DemoScreen.cancelledHistory:
+        return TripHistoryDetailedReceiptScreen(
+          key: const ValueKey('screen_16_history_cancelled'),
+          initialTab: 1,
+          onSosTap: () {
+            _navigateTo(DemoScreen.safetyHubSosCenter);
+          },
+          onBottomNavTap: _handleBottomNavTap,
+        );
+
+      // Incentives / Weekly Quests
+      case DemoScreen.incentives:
+      case DemoScreen.incentivesWeeklyQuests:
+        return IncentivesWeeklyQuestsScreen(
+          key: const ValueKey('screen_incentives'),
+          onBackTap: () {
+            _navigateTo(DemoScreen.driverHomeDashboard);
+          },
           onSosTap: () {
             _navigateTo(DemoScreen.safetyHubSosCenter);
           },
@@ -394,9 +427,25 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
           onBackTap: () {
             _navigateTo(DemoScreen.driverHomeDashboard);
           },
+          onRideRequestTap: () {
+            _navigateTo(DemoScreen.incomingRideRequest);
+          },
+          onTripCompletedTap: () {
+            _navigateTo(DemoScreen.tripCompletion);
+          },
+          onIncentivesTap: () {
+            _navigateTo(DemoScreen.scheduledRidesAdvanceBookings);
+          },
+          onRatingsTap: () {
+            _navigateTo(DemoScreen.ratingsReviewsDisputeCenter);
+          },
+          onPayoutTap: () {
+            _navigateTo(DemoScreen.earningsInstantPayout);
+          },
           onSosTap: () {
             _navigateTo(DemoScreen.safetyHubSosCenter);
           },
+          onBottomNavTap: _handleBottomNavTap,
         );
 
       // 18: Safety & SOS
@@ -427,6 +476,9 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
           onBackTap: () {
             _navigateTo(DemoScreen.driverHomeDashboard);
           },
+          onEditProfileTap: () {
+            _navigateTo(DemoScreen.driverProfileSetup);
+          },
           onVehicleTap: () {
             _navigateTo(DemoScreen.vehicleManagement);
           },
@@ -436,19 +488,15 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
           onBankTap: () {
             _navigateTo(DemoScreen.bankDetails);
           },
-          onLogoutTap: () {
+          onLogoutTap: () async {
             _handleManualInteraction(pause: true);
-            DriverBackendService.instance.logout();
+            await TokenStorageService.instance.clearSession();
+            await DriverBackendService.instance.logout();
+            RideService.instance.clearSession();
             _navigationHistory.clear();
             _demoController.jumpToScreen(DemoScreen.loginRegister);
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Logged out successfully.'),
-                  backgroundColor: QuickServeColors.primaryOrange,
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              AppToast.info(context, 'Logged out successfully.');
             }
           },
           onBottomNavTap: _handleBottomNavTap,
@@ -499,6 +547,23 @@ class _QuickServeDriverRootFlowState extends State<QuickServeDriverRootFlow> {
           key: const ValueKey('screen_25_admin'),
           onBack: () {
             _navigateTo(DemoScreen.driverHomeDashboard);
+          },
+        );
+
+      // ignore: unreachable_switch_default
+      default:
+        return DriverLoginRegistrationScreen(
+          onBackTap: () {
+            _handleManualInteraction(pause: true);
+            _demoController.jumpToScreen(DemoScreen.splashScreen);
+          },
+          onGetOtp: () {
+            _navigateTo(DemoScreen.otpVerification);
+          },
+          onLoginSuccess: () {
+            _handleManualInteraction(pause: true);
+            _navigationHistory.clear();
+            _demoController.jumpToScreen(DemoScreen.driverHomeDashboard);
           },
         );
     }

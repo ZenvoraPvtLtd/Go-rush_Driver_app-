@@ -59,13 +59,13 @@ class _TermsConditionsScreenState extends State<TermsConditionsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
-                          'QuickServe Fleet Partner Agreement',
+                          'GoRush Fleet Partner Agreement',
                           style: TextStyle(color: QuickServeColors.textDark, fontSize: 14, fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: 8),
                         Text(
                           '1. Service Standards: You agree to provide safe, respectful, and reliable transportation services in compliance with local motor vehicle regulations.\n\n'
-                          '2. Fare Calculation: QuickServe calculates fares using transparent GPS distance and time algorithms. Commissions and taxes will be itemized on each receipt.\n\n'
+                          '2. Fare Calculation: GoRush calculates fares using transparent GPS distance and time algorithms. Commissions and taxes will be itemized on each receipt.\n\n'
                           '3. Safety Protocol: Drivers must maintain valid insurance, PUC, and comply with zero-tolerance alcohol and drug policies.\n\n'
                           '4. Cancellation & Ratings: Frequent unverified cancellations may impact driver tier and peak incentive eligibility.',
                           style: TextStyle(color: QuickServeColors.textSecondary, fontSize: 12, height: 1.5),
@@ -84,7 +84,7 @@ class _TermsConditionsScreenState extends State<TermsConditionsScreen> {
                 value: _agree1,
                 onChanged: (val) => setState(() => _agree1 = val ?? false),
                 title: const Text(
-                  'I accept the QuickServe Driver Partner Agreement and fare structure.',
+                  'I accept the GoRush Driver Partner Agreement and fare structure.',
                   style: TextStyle(color: QuickServeColors.textDark, fontSize: 12, fontWeight: FontWeight.w500),
                 ),
                 controlAffinity: ListTileControlAffinity.leading,

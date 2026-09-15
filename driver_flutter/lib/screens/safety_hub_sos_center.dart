@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/app_toast.dart';
 import '../core/theme.dart';
 
 class SafetyHubSosCenterScreen extends StatefulWidget {
@@ -28,7 +29,7 @@ class _SafetyHubSosCenterScreenState extends State<SafetyHubSosCenterScreen> {
           onPressed: widget.onBackTap ?? () => Navigator.of(context).maybePop(),
         ),
         title: const Text(
-          'Safety Center',
+          'Safety & SOS Center',
           style: TextStyle(
             color: QuickServeColors.textDark,
             fontSize: 18,
@@ -42,16 +43,14 @@ class _SafetyHubSosCenterScreenState extends State<SafetyHubSosCenterScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           physics: const BouncingScrollPhysics(),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 10),
-
-              // Emergency SOS Section
+              // Emergency Broadcast Card
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -60,28 +59,29 @@ class _SafetyHubSosCenterScreenState extends State<SafetyHubSosCenterScreen> {
                     BoxShadow(
                       color: Colors.black.withOpacity(0.04),
                       blurRadius: 10,
-                      offset: const Offset(0, 3),
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Column(
                   children: [
                     const Text(
-                      'Emergency Assistance',
+                      'Emergency SOS',
                       style: TextStyle(
                         color: QuickServeColors.textDark,
-                        fontSize: 18,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     const Text(
-                      'Tap to send instant live location & dispatch safety team',
+                      'Press and hold to instantly broadcast your live GPS to GoRush Emergency Dispatch and Police.',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         color: QuickServeColors.textSecondary,
-                        fontSize: 12,
+                        fontSize: 13,
+                        height: 1.4,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
 
@@ -91,16 +91,11 @@ class _SafetyHubSosCenterScreenState extends State<SafetyHubSosCenterScreen> {
                         setState(() {
                           _isSosActive = !_isSosActive;
                         });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              _isSosActive
-                                  ? 'EMERGENCY BEACON TRIGGERED: Police & QuickServe notified!'
-                                  : 'Emergency alert canceled.',
-                            ),
-                            backgroundColor: _isSosActive ? QuickServeColors.statusRed : QuickServeColors.textDark,
-                          ),
-                        );
+                        if (_isSosActive) {
+                          AppToast.error(context, 'EMERGENCY BEACON TRIGGERED: Police & GoRush notified!');
+                        } else {
+                          AppToast.show(context, 'Emergency SOS beacon deactivated.');
+                        }
                       },
                       child: Container(
                         width: 140,
@@ -144,7 +139,7 @@ class _SafetyHubSosCenterScreenState extends State<SafetyHubSosCenterScreen> {
 
                     const SizedBox(height: 18),
                     const Text(
-                      '24x7 QuickServe Emergency Response Protocol Active',
+                      '24x7 GoRush Emergency Response Protocol Active',
                       style: TextStyle(
                         color: QuickServeColors.textMuted,
                         fontSize: 11,
@@ -217,9 +212,7 @@ class _SafetyHubSosCenterScreenState extends State<SafetyHubSosCenterScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Dialing 112...')),
-                        );
+                        AppToast.error(context, 'Dialing 112...');
                       },
                     ),
                   ),
@@ -235,11 +228,7 @@ class _SafetyHubSosCenterScreenState extends State<SafetyHubSosCenterScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
                       ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Connecting to QuickServe Safety Desk...')),
-                        );
-                      },
+                      onPressed: () => AppToast.show(context, 'Connecting to GoRush Safety Desk...'),
                     ),
                   ),
                 ],

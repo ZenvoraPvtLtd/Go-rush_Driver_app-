@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
-import '../widgets/app_top_header.dart';
 import '../widgets/app_bottom_nav.dart';
-import '../widgets/floating_sos_button.dart';
 
 class IncentivesWeeklyQuestsScreen extends StatefulWidget {
+  final VoidCallback? onBackTap;
   final VoidCallback? onSosTap;
   final Function(int)? onBottomNavTap;
 
   const IncentivesWeeklyQuestsScreen({
     super.key,
+    this.onBackTap,
     this.onSosTap,
     this.onBottomNavTap,
   });
@@ -22,415 +22,273 @@ class _IncentivesWeeklyQuestsScreenState extends State<IncentivesWeeklyQuestsScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: GoRushColors.background,
-      body: Stack(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                AppTopHeader(
-                  title: 'PARTNER FLEET\nRadar',
-                  isOnline: true,
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Pro Tier Banner
-                        _buildProTierBanner(),
-                        const SizedBox(height: 10),
-                        // Shift Boost Card
-                        _buildShiftBoostCard(),
-                        const SizedBox(height: 14),
-                        // Active Quests
-                        const Text('Active Quests', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        _buildQuestItem(
-                          title: 'Peak Hour Rush',
-                          subtitle: '5:00 PM - 9:00 PM Window',
-                          reward: '+₹300',
-                          timeLeft: '1h 24m left',
-                          progress: 2 / 4,
-                          progressLabel: '2 of 4 rides',
-                          accentColor: GoRushColors.primaryGreen,
-                        ),
-                        const SizedBox(height: 10),
-                        _buildQuestItem(
-                          title: 'Weekend Warrior',
-                          subtitle: '25 Trips Target (Fri - Sun)',
-                          reward: '+₹1,500',
-                          timeLeft: '24% completed',
-                          progress: 6 / 25,
-                          progressLabel: '6 of 25 rides',
-                          accentColor: GoRushColors.gold,
-                        ),
-                        const SizedBox(height: 10),
-                        _buildQuestItem(
-                          title: 'Zero Cancellation Streak',
-                          subtitle: 'Maintain 100% acceptance today',
-                          reward: '+₹200',
-                          timeLeft: 'ACTIVE',
-                          progress: 1.0,
-                          progressLabel: 'All 9 trips accepted',
-                          accentColor: GoRushColors.blueAccent,
-                        ),
-                        const SizedBox(height: 16),
-                        // Weekly Milestones
-                        _buildMilestonesCard(),
-                        const SizedBox(height: 16),
-                        // Fleet Leaderboard
-                        _buildLeaderboardCard(),
-                        const SizedBox(height: 14),
-                        // Referral Program Card
-                        _buildReferralCard(),
-                        const SizedBox(height: 90),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      backgroundColor: QuickServeColors.surfaceLight,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: QuickServeColors.textDark),
+          onPressed: widget.onBackTap ?? () => Navigator.of(context).maybePop(),
+        ),
+        title: const Text(
+          'Incentives',
+          style: TextStyle(
+            color: QuickServeColors.textDark,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
-          if (widget.onSosTap != null)
-            FloatingSosButton(
-              onTap: widget.onSosTap!,
-              bottomOffset: 70,
-              rightOffset: 14,
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: QuickServeColors.borderLight),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Hero Banner: Drive More Earn More with Golden Trophy (Phone 9)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text(
+                                  'Drive More Earn More',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 6),
+                                Text(
+                                  'Complete quests and unlock extra rewards every week!',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.18),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.emoji_events, color: Color(0xFFFBBF24), size: 36),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Section Title
+                    const Text(
+                      'Active Quests & Challenges',
+                      style: TextStyle(
+                        color: QuickServeColors.textDark,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Card 1: Weekly Challenge • ₹1,000
+                    _buildIncentiveCard(
+                      title: 'Weekly Challenge',
+                      reward: '₹1,000',
+                      description: 'Complete 15 trips this week',
+                      progress: 8 / 15,
+                      progressText: '8 of 15 trips completed',
+                      accentColor: QuickServeColors.primaryBlue,
+                      icon: Icons.flag,
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Card 2: Weekend Bonus • ₹500
+                    _buildIncentiveCard(
+                      title: 'Weekend Bonus',
+                      reward: '₹500',
+                      description: 'Complete 10 trips during Saturday & Sunday',
+                      progress: 5 / 10,
+                      progressText: '5 of 10 trips completed',
+                      accentColor: QuickServeColors.statusGreen,
+                      icon: Icons.weekend,
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Card 3: Top Driver • ₹1,500
+                    _buildIncentiveCard(
+                      title: 'Top Driver',
+                      reward: '₹1,500',
+                      description: 'Maintain 4.5+ average rating this month',
+                      progress: 1.0,
+                      progressText: '4.8 ★ / 4.5 Rating (Qualified)',
+                      accentColor: const Color(0xFFF59E0B),
+                      icon: Icons.star,
+                    ),
+
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
             ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: AppBottomNav(
-              selectedIndex: 3,
-              onTabSelected: (index) {
+
+            // Bottom Navigation (Incentives Tab Active: Index 3)
+            AppBottomNav(
+              currentIndex: 3,
+              onTap: (idx) {
                 if (widget.onBottomNavTap != null) {
-                  widget.onBottomNavTap!(index);
+                  widget.onBottomNavTap!(idx);
                 }
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildProTierBanner() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF142036),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GoRushColors.gold.withOpacity(0.5)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: GoRushColors.gold.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.workspace_premium, color: GoRushColors.gold, size: 28),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        'Level 4 Pro Partner',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    SizedBox(width: 6),
-                    Icon(Icons.verified, color: GoRushColors.primaryGreen, size: 14),
-                  ],
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Top 5% Tier • 1.15x Multiplier Perks >',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: GoRushColors.textSecondary, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0x2200E676),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Text('Active', style: TextStyle(color: GoRushColors.primaryGreen, fontSize: 10, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShiftBoostCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF11293D),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: GoRushColors.primaryGreen.withOpacity(0.3)),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.bolt, color: GoRushColors.primaryGreen, size: 20),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '+₹2,000 In Reach Today',
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-          ),
-          Text(
-            'Surge Active',
-            style: TextStyle(color: GoRushColors.primaryGreen, fontSize: 11, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuestItem({
+  Widget _buildIncentiveCard({
     required String title,
-    required String subtitle,
     required String reward,
-    required String timeLeft,
+    required String description,
     required double progress,
-    required String progressLabel,
+    required String progressText,
     required Color accentColor,
+    required IconData icon,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: GoRushColors.surfaceCard,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GoRushColors.surfaceBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(reward, style: TextStyle(color: accentColor, fontSize: 15, fontWeight: FontWeight.w900)),
-            ],
+        border: Border.all(color: QuickServeColors.borderLight),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  subtitle,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: GoRushColors.textMuted, fontSize: 11),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(timeLeft, style: TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          LinearProgressIndicator(
-            value: progress,
-            minHeight: 6,
-            borderRadius: BorderRadius.circular(3),
-            backgroundColor: const Color(0xFF162544),
-            valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-          ),
-          const SizedBox(height: 4),
-          Text(progressLabel, style: const TextStyle(color: GoRushColors.textSecondary, fontSize: 10)),
         ],
       ),
-    );
-  }
-
-  Widget _buildMilestonesCard() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: GoRushColors.surfaceCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GoRushColors.surfaceBorder),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Row(
             children: [
-              Text('Weekly Milestones', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-              Text('Resets Mon midnight', style: TextStyle(color: GoRushColors.textMuted, fontSize: 10)),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: accentColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: QuickServeColors.textDark,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        color: QuickServeColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: QuickServeColors.statusGreenLight,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: QuickServeColors.statusGreen, width: 0.8),
+                ),
+                child: Text(
+                  reward,
+                  style: const TextStyle(
+                    color: QuickServeColors.statusGreen,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progress.clamp(0.0, 1.0),
+              minHeight: 8,
+              backgroundColor: const Color(0xFFF1F5F9),
+              valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+            ),
+          ),
+          const SizedBox(height: 6),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildMilestoneNode('15 Trips', '₹500', isDone: false),
-              Container(width: 40, height: 2, color: const Color(0xFF1E355A)),
-              _buildMilestoneNode('30 Trips', '₹1,200', isDone: false),
-              Container(width: 40, height: 2, color: const Color(0xFF1E355A)),
-              _buildMilestoneNode('45 Trips', '₹2,500', isDone: false),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Center(
-            child: Text(
-              '14 more trips to unlock Tier 2 bonus • 4 days left',
-              style: TextStyle(color: GoRushColors.textSecondary, fontSize: 11),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMilestoneNode(String label, String reward, {required bool isDone}) {
-    return Column(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: isDone ? GoRushColors.primaryGreen : const Color(0xFF162644),
-            shape: BoxShape.circle,
-            border: Border.all(color: isDone ? GoRushColors.primaryGreen : GoRushColors.surfaceBorder),
-          ),
-          child: Center(
-            child: Icon(
-              isDone ? Icons.check : Icons.lock_outline,
-              size: 14,
-              color: isDone ? Colors.black : GoRushColors.textMuted,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
-        Text(reward, style: const TextStyle(color: GoRushColors.primaryGreen, fontSize: 10, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  Widget _buildLeaderboardCard() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: GoRushColors.surfaceCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GoRushColors.surfaceBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Fleet Leaderboard', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-              Text('Delhi NCR • Weekly', style: TextStyle(color: GoRushColors.textMuted, fontSize: 10)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _buildLeaderboardRow('1', 'Manpreet S.', 'South Delhi Fleet • 68 trips', '₹28,400', isFirst: true),
-          const SizedBox(height: 8),
-          _buildLeaderboardRow('2', 'Rajesh K. (You)', 'Gurugram Central • 58 trips', '₹24,800', isUser: true),
-          const SizedBox(height: 8),
-          _buildLeaderboardRow('3', 'Vikram T.', 'Noida Sector 62 • 54 trips', '₹23,900'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLeaderboardRow(String rank, String name, String subtitle, String earnings, {bool isFirst = false, bool isUser = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: isUser ? const Color(0xFF142B3F) : const Color(0xFF0F1A2D),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isUser ? GoRushColors.primaryGreen.withOpacity(0.5) : Colors.transparent),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: isFirst ? GoRushColors.gold : (isUser ? GoRushColors.primaryGreen : const Color(0xFF1E355A)),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                rank,
+              Text(
+                progressText,
+                style: const TextStyle(
+                  color: QuickServeColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                '${(progress * 100).toInt()}%',
                 style: TextStyle(
-                  color: (isFirst || isUser) ? Colors.black : Colors.white,
+                  color: accentColor,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: TextStyle(color: isUser ? GoRushColors.primaryGreen : Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                Text(subtitle, style: const TextStyle(color: GoRushColors.textMuted, fontSize: 10)),
-              ],
-            ),
-          ),
-          Text(earnings, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReferralCard() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1F33),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GoRushColors.primaryGreen.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('DRIVER REFERRAL PROGRAM', style: TextStyle(color: GoRushColors.gold, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
-          const SizedBox(height: 4),
-          const Text('Invite fellow drivers & earn ₹1,000', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 2),
-          const Text('Bonus is credited immediately when your referred partner completes their first 20 trips.', style: TextStyle(color: GoRushColors.textSecondary, fontSize: 10)),
-          const SizedBox(height: 10),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.share, size: 14, color: Colors.black),
-            label: const Text('Share Invite Link [RAJESH100]', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(backgroundColor: GoRushColors.primaryGreen),
-            onPressed: () {},
+            ],
           ),
         ],
       ),

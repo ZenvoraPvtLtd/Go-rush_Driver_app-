@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../core/app_toast.dart';
 import '../core/theme.dart';
 import '../widgets/safe_avatar.dart';
+import '../models/ride_model.dart';
+import '../services/ride_service.dart';
 
 class PassengerTripManagementScreen extends StatefulWidget {
   final VoidCallback? onStartTrip;
@@ -21,7 +24,18 @@ class PassengerTripManagementScreen extends StatefulWidget {
 }
 
 class _PassengerTripManagementScreenState extends State<PassengerTripManagementScreen> {
-  final TextEditingController _otpController = TextEditingController(text: '4892');
+  late final TextEditingController _otpController;
+
+  @override
+  void initState() {
+    super.initState();
+    final ride = RideService.instance.activeRide ?? RideModel.defaultSample();
+    _otpController = TextEditingController(text: ride.otp);
+    final id = ride.rideId.isNotEmpty ? ride.rideId : ride.id;
+    if (id.isNotEmpty) {
+      RideService.instance.markArrived(id);
+    }
+  }
 
   @override
   void dispose() {
@@ -31,6 +45,8 @@ class _PassengerTripManagementScreenState extends State<PassengerTripManagementS
 
   @override
   Widget build(BuildContext context) {
+    final ride = RideService.instance.activeRide ?? RideModel.defaultSample();
+
     return Scaffold(
       backgroundColor: QuickServeColors.surfaceLight,
       appBar: AppBar(
@@ -83,33 +99,33 @@ class _PassengerTripManagementScreenState extends State<PassengerTripManagementS
                         shape: BoxShape.circle,
                         border: Border.all(color: QuickServeColors.borderLight, width: 1.5),
                       ),
-                      child: const SafeAvatar(
-                        imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+                      child: SafeAvatar(
+                        imageUrl: ride.passengerAvatar,
                         radius: 23,
-                        fallbackText: 'PS',
+                        fallbackText: ride.passengerName.isNotEmpty ? ride.passengerName.substring(0, 1) : 'PS',
                       ),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Priya Sharma',
-                            style: TextStyle(
+                            ride.passengerName,
+                            style: const TextStyle(
                               color: QuickServeColors.textDark,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: 3),
+                          const SizedBox(height: 3),
                           Row(
                             children: [
-                              Icon(Icons.star, color: Color(0xFFFBBF24), size: 14),
-                              SizedBox(width: 3),
+                              const Icon(Icons.star, color: Color(0xFFFBBF24), size: 14),
+                              const SizedBox(width: 3),
                               Text(
-                                '4.8 (120 rides)',
-                                style: TextStyle(
+                                '${ride.passengerRating.toStringAsFixed(1)} (${ride.passengerTotalRides} rides)',
+                                style: const TextStyle(
                                   color: QuickServeColors.textSecondary,
                                   fontSize: 12,
                                 ),
@@ -131,9 +147,7 @@ class _PassengerTripManagementScreenState extends State<PassengerTripManagementS
                         child: const Icon(Icons.phone, color: QuickServeColors.textDark, size: 18),
                       ),
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Calling passenger Priya Sharma...')),
-                        );
+                        AppToast.info(context, 'Calling passenger Priya Sharma...');
                       },
                     ),
                     // Chat Button
@@ -233,9 +247,9 @@ class _PassengerTripManagementScreenState extends State<PassengerTripManagementS
                                   ),
                                 ],
                               ),
-                              const Text(
-                                'Sector 62, Noida',
-                                style: TextStyle(
+                              Text(
+                                ride.pickupAddress,
+                                style: const TextStyle(
                                   color: QuickServeColors.textDark,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -250,9 +264,9 @@ class _PassengerTripManagementScreenState extends State<PassengerTripManagementS
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              const Text(
-                                'Connaught Place, New Delhi',
-                                style: TextStyle(
+                              Text(
+                                ride.destinationAddress,
+                                style: const TextStyle(
                                   color: QuickServeColors.textDark,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -347,7 +361,22 @@ class _PassengerTripManagementScreenState extends State<PassengerTripManagementS
 
               // Large Orange Start Trip CTA
               ElevatedButton(
-                onPressed: widget.onStartTrip,
+                onPressed: () async {
+                  final enteredOtp = _otpController.text.trim();
+                  if (enteredOtp.isEmpty || enteredOtp.length < 4) {
+                    AppToast.error(context, 'Please enter the 4-digit OTP provided by passenger');
+                    return;
+                  }
+                  final ok = await RideService.instance.startTrip(ride.rideId.isNotEmpty ? ride.rideId : ride.id, enteredOtp);
+                  if (context.mounted) {
+                    if (ok) {
+                      AppToast.success(context, 'OTP Verified! Trip started');
+                      widget.onStartTrip?.call();
+                    } else {
+                      AppToast.error(context, 'Invalid OTP. Please check with passenger.');
+                    }
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: QuickServeColors.primaryOrange,
                   foregroundColor: Colors.white,
@@ -365,10 +394,13 @@ class _PassengerTripManagementScreenState extends State<PassengerTripManagementS
 
               // Outlined Cancel Trip Button
               OutlinedButton(
-                onPressed: widget.onCancelTrip ?? () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Trip cancellation dialog opened')),
-                  );
+                onPressed: () async {
+                  AppToast.info(context, 'Cancelling trip...');
+                  await RideService.instance.rejectRide(ride.rideId.isNotEmpty ? ride.rideId : ride.id, reason: 'Driver cancelled at pickup');
+                  if (context.mounted) {
+                    AppToast.info(context, 'Trip cancelled.');
+                    widget.onCancelTrip?.call();
+                  }
                 },
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: QuickServeColors.borderLight),

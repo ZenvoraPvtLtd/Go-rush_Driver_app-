@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
+import '../services/app_language_service.dart';
 
 class AppBottomNav extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTabSelected;
   final VoidCallback? onSosTap;
+  final VoidCallback? onMenuTap;
   final bool showSosBadge;
+  final bool isFleetNav;
 
   const AppBottomNav({
     super.key,
@@ -14,9 +17,13 @@ class AppBottomNav extends StatelessWidget {
     Function(int)? onTabSelected,
     Function(int)? onTap,
     this.onSosTap,
+    this.onMenuTap,
     this.showSosBadge = false,
+    bool isFleetNav = false,
+    bool isFleetMode = false,
   })  : selectedIndex = selectedIndex ?? currentIndex ?? 0,
-        onTabSelected = onTabSelected ?? onTap ?? _noop;
+        onTabSelected = onTabSelected ?? onTap ?? _noop,
+        isFleetNav = isFleetNav || isFleetMode;
 
   static void _noop(int _) {}
 
@@ -34,17 +41,35 @@ class AppBottomNav extends StatelessWidget {
         top: false,
         child: SizedBox(
           height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-              _buildNavItem(1, Icons.account_balance_wallet_outlined, Icons.account_balance_wallet, 'Earnings'),
-              _buildNavItem(2, Icons.history, Icons.history, 'History'),
-              _buildNavItem(3, Icons.person_outline, Icons.person, 'Profile'),
-            ],
-          ),
+          child: isFleetNav ? _buildFleetRow() : _buildDriverRow(),
         ),
       ),
+    );
+  }
+
+  Widget _buildDriverRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildNavItem(0, Icons.home_outlined, Icons.home, tr('Home')),
+        _buildNavItem(1, Icons.directions_car_outlined, Icons.directions_car, tr('Rides')),
+        _buildNavItem(2, Icons.account_balance_wallet_outlined, Icons.account_balance_wallet, tr('Earnings')),
+        _buildNavItem(3, Icons.card_giftcard_outlined, Icons.card_giftcard, tr('Incentives')),
+        _buildNavItem(4, Icons.person_outline, Icons.person, tr('Profile')),
+      ],
+    );
+  }
+
+  Widget _buildFleetRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildNavItem(0, Icons.home_outlined, Icons.home, tr('Home')),
+        _buildNavItem(1, Icons.people_outline, Icons.people, tr('Drivers')),
+        _buildNavItem(2, Icons.directions_car_outlined, Icons.directions_car, tr('Vehicles')),
+        _buildNavItem(3, Icons.bar_chart_outlined, Icons.bar_chart, tr('Reports')),
+        _buildNavItem(4, Icons.person_outline, Icons.person, tr('Profile')),
+      ],
     );
   }
 
@@ -53,6 +78,7 @@ class AppBottomNav extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: () => onTabSelected(index),
+        onLongPress: onMenuTap,
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
         child: Column(
@@ -61,16 +87,18 @@ class AppBottomNav extends StatelessWidget {
             Icon(
               isSelected ? filledIcon : outlineIcon,
               size: 22,
-              color: isSelected ? QuickServeColors.primaryOrange : QuickServeColors.textMuted,
+              color: isSelected ? QuickServeColors.statusGreen : QuickServeColors.textMuted,
             ),
             const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? QuickServeColors.primaryOrange : QuickServeColors.textMuted,
-                fontSize: 11,
+                color: isSelected ? QuickServeColors.statusGreen : QuickServeColors.textMuted,
+                fontSize: 10,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

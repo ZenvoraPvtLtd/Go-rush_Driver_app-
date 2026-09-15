@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
-import '../core/maps_provider.dart';
+import '../core/app_toast.dart';
 import '../widgets/app_bottom_nav.dart';
-import '../widgets/safe_avatar.dart';
+import '../services/driver_backend_service.dart';
+import '../services/token_storage_service.dart';
+import '../services/ride_service.dart';
 
 class DriverHomeDashboardScreen extends StatefulWidget {
   final VoidCallback? onSosTap;
@@ -14,7 +16,9 @@ class DriverHomeDashboardScreen extends StatefulWidget {
   final VoidCallback? onRatingsTap;
   final VoidCallback? onSaathiAiTap;
   final VoidCallback? onNotificationTap;
+  final VoidCallback? onInstantCashOutTap;
   final Function(int)? onBottomNavTap;
+  final VoidCallback? onLogoutTap;
 
   const DriverHomeDashboardScreen({
     super.key,
@@ -27,7 +31,9 @@ class DriverHomeDashboardScreen extends StatefulWidget {
     this.onRatingsTap,
     this.onSaathiAiTap,
     this.onNotificationTap,
+    this.onInstantCashOutTap,
     this.onBottomNavTap,
+    this.onLogoutTap,
   });
 
   @override
@@ -38,72 +44,721 @@ class _DriverHomeDashboardScreenState extends State<DriverHomeDashboardScreen> {
   bool _isOnline = true;
 
   @override
+  void initState() {
+    super.initState();
+    _isOnline = RideService.instance.isOnline;
+    TokenStorageService.instance.addListener(_onProfileChanged);
+    RideService.instance.addListener(_onRideServiceChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      RideService.instance.init();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant DriverHomeDashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    TokenStorageService.instance.removeListener(_onProfileChanged);
+    RideService.instance.removeListener(_onRideServiceChanged);
+    super.dispose();
+  }
+
+  void _onProfileChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _onRideServiceChanged() {
+    if (mounted) {
+      setState(() {
+        _isOnline = RideService.instance.isOnline;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: QuickServeColors.surfaceLight,
       body: SafeArea(
         child: Column(
           children: [
-            // Top App Bar: Rohit Sharma & Online Status
-            _buildTopBar(),
-
-            // Content naturally distributed across available screen height (no empty space)
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final availHeight = constraints.maxHeight;
-
-                  // Responsively adapt section sizes so content naturally fills the viewport
-                  // while guaranteeing SOS + Support Hub sits directly above bottom nav with professional spacing
-                  final bool isCompact = availHeight < 620;
-
-                  final double padV = (availHeight * 0.012).clamp(6.0, 9.0);
-                  final double bottomMargin = (availHeight * 0.018).clamp(8.0, 14.0);
-
-                  // Calibrated map height and gap scaling so content naturally fills available viewport
-                  // without pushing SOS behind bottom navigation
-                  final double mapHeight = (availHeight < 680)
-                      ? ((availHeight - 540.0) * 0.15 + 105.0).clamp(105.0, 125.0)
-                      : ((availHeight - 680.0) * 0.35 + 130.0).clamp(130.0, 220.0);
-                  final double gap = (availHeight < 680)
-                      ? 8.5
-                      : ((availHeight - 680.0) * 0.03 + 9.0).clamp(9.0, 15.0);
-
                   return SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: padV),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Embedded Light Map Card with Current Location Pin
-                        _buildMapSection(mapHeight),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: IntrinsicHeight(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // 1. Header: Greeting, Driver ID, Verified Badge, Bell icon
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: widget.onProfileTap,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Builder(
+                                             builder: (ctx) {
+                                               final profile = TokenStorageService.instance.driverProfile ?? DriverBackendService.instance.driverProfile;
+                                               final dynamic nameVal = profile?['name'];
+                                               final rawName = nameVal?.toString().trim();
+                                               final driverName = (rawName != null && rawName.isNotEmpty && rawName != 'null') ? rawName : 'Driver Partner';
+                                               final dynamic phoneVal = profile?['phone'];
+                                               final rawPhone = phoneVal?.toString().trim();
+                                               final driverId = (rawPhone != null && rawPhone.isNotEmpty && rawPhone != 'null') ? rawPhone : '81224367641';
 
-                        SizedBox(height: gap),
+                                              return Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Text(
+                                                        'Good Morning, ',
+                                                        style: TextStyle(
+                                                          color: QuickServeColors.textDark,
+                                                          fontSize: 18,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      Flexible(
+                                                        child: Text(
+                                                          driverName,
+                                                          style: const TextStyle(
+                                                            color: QuickServeColors.primaryBlue,
+                                                            fontSize: 18,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Wrap(
+                                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                                    spacing: 6,
+                                                    runSpacing: 4,
+                                                    children: [
+                                                      Text(
+                                                        'ID: $driverId',
+                                                        style: const TextStyle(
+                                                          color: QuickServeColors.textSecondary,
+                                                          fontSize: 11.5,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: QuickServeColors.statusGreenLight,
+                                                          borderRadius: BorderRadius.circular(10),
+                                                          border: Border.all(color: QuickServeColors.statusGreen, width: 0.8),
+                                                        ),
+                                                        child: Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: const [
+                                                            Icon(Icons.check_circle, color: QuickServeColors.statusGreen, size: 11),
+                                                            SizedBox(width: 3),
+                                                            Text(
+                                                              'Verified',
+                                                              style: TextStyle(
+                                                                color: QuickServeColors.statusGreen,
+                                                                fontSize: 10,
+                                                                fontWeight: FontWeight.bold,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      if (widget.onLogoutTap != null)
+                                                        GestureDetector(
+                                                          onTap: widget.onLogoutTap,
+                                                          child: Container(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                            decoration: BoxDecoration(
+                                                              color: const Color(0xFFEFF6FF),
+                                                              borderRadius: BorderRadius.circular(10),
+                                                              border: Border.all(color: const Color(0xFF3B82F6), width: 0.8),
+                                                            ),
+                                                            child: Row(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: const [
+                                                                Icon(Icons.person_add_alt_1_outlined, color: Color(0xFF2563EB), size: 11),
+                                                                SizedBox(width: 3),
+                                                                Text(
+                                                                  'Register / Switch',
+                                                                  style: TextStyle(
+                                                                    color: Color(0xFF2563EB),
+                                                                    fontSize: 10,
+                                                                    fontWeight: FontWeight.bold,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Notification Bell
+                                  GestureDetector(
+                                    onTap: widget.onNotificationTap,
+                                    child: Stack(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: QuickServeColors.borderLight),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.04),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Icon(Icons.notifications_none, color: QuickServeColors.textDark, size: 22),
+                                        ),
+                                        Positioned(
+                                          top: 8,
+                                          right: 8,
+                                          child: Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: const BoxDecoration(
+                                              color: QuickServeColors.statusRed,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
 
-                        // 4 Metrics Grid (2x2)
-                        _buildMetricsGrid(isCompact),
+                              // 2. Blue Hero Earnings Card (Today's Earnings ₹12,400 | Total Rides 18)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF2563EB).withOpacity(0.35),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              "Today's Earnings",
+                                              style: TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            const Text(
+                                              '₹12,400',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 28,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: -0.5,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.2),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: const [
+                                                  Icon(Icons.trending_up, color: Color(0xFF86EFAC), size: 13),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    '+12% vs yesterday',
+                                                    style: TextStyle(
+                                                      color: Color(0xFF86EFAC),
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(0.15),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(Icons.directions_car, color: Colors.white, size: 24),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              '${RideService.instance.earnings.totalRides}',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const Text(
+                                              'Total Rides',
+                                              style: TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
 
-                        SizedBox(height: gap),
+                              // 2.5 Incoming Ride Alert Banner (if pending ride available)
+                              if (_isOnline && RideService.instance.availableRide != null) ...[
+                                const SizedBox(height: 10),
+                                GestureDetector(
+                                  onTap: widget.onIncomingRequestTap,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: const Color(0xFF3B82F6), width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF2563EB).withOpacity(0.12),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFF2563EB),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.directions_car, color: Colors.white, size: 18),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Incoming Ride: ${RideService.instance.availableRide!.passengerName}',
+                                                style: const TextStyle(
+                                                  color: Color(0xFF1E3A8A),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                              Text(
+                                                '${RideService.instance.availableRide!.pickupArea} • ₹${RideService.instance.availableRide!.totalFare.toStringAsFixed(0)} • Tap to view',
+                                                style: const TextStyle(
+                                                  color: Color(0xFF2563EB),
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Icon(Icons.arrow_forward_ios, color: Color(0xFF2563EB), size: 14),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
 
-                        // QuickServe Incoming Request Banner (Ride Flow Launcher)
-                        _buildIncomingRequestBanner(isCompact),
+                              // 3. 3 Action Quick Circles: Go Online, Navigation, Support
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildActionCircle(
+                                    label: _isOnline ? 'Online' : 'Go Online',
+                                    icon: _isOnline ? Icons.power_settings_new : Icons.power_off,
+                                    bgColor: _isOnline ? const Color(0xFF22C55E) : const Color(0xFF94A3B8),
+                                    onTap: () async {
+                                      final target = !_isOnline;
+                                      setState(() {
+                                        _isOnline = target;
+                                      });
+                                      await RideService.instance.setOnlineStatus(target);
+                                      if (context.mounted) {
+                                        if (target) {
+                                          AppToast.success(context, 'You are now Online. Looking for rides...');
+                                          final ride = await RideService.instance.fetchAvailableRide();
+                                          if (ride != null && context.mounted) {
+                                            widget.onIncomingRequestTap?.call();
+                                          }
+                                        } else {
+                                          AppToast.info(context, 'You are now Offline.');
+                                        }
+                                      }
+                                    },
+                                  ),
+                                  _buildActionCircle(
+                                    label: 'Navigation',
+                                    icon: Icons.navigation_rounded,
+                                    bgColor: const Color(0xFF2563EB),
+                                    onTap: widget.onIncomingRequestTap,
+                                  ),
+                                  _buildActionCircle(
+                                    label: 'Support',
+                                    icon: Icons.headset_mic_rounded,
+                                    bgColor: const Color(0xFF8B5CF6),
+                                    onTap: widget.onSaathiAiTap,
+                                  ),
+                                ],
+                              ),
 
-                        SizedBox(height: gap),
+                              // 4. Verification Successful Card Banner
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFDCFCE7),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.verified_user, color: Color(0xFF15803D), size: 18),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: const [
+                                          Text(
+                                            'Verification Successful!',
+                                            style: TextStyle(
+                                              color: Color(0xFF15803D),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 1),
+                                          Text(
+                                            'Your account has been verified and you are ready to accept rides.',
+                                            style: TextStyle(
+                                              color: Color(0xFF166534),
+                                              fontSize: 10.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Icons.chevron_right, color: Color(0xFF15803D), size: 18),
+                                  ],
+                                ),
+                              ),
 
-                        // Quick Actions Row (Safety SOS & Support Hub)
-                        _buildQuickActionsRow(isCompact),
+                              // 5. 4 Metrics Grid (2x2)
+                              Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildMetricTile(
+                                          title: 'Total Rides',
+                                          value: '18',
+                                          icon: Icons.local_taxi_outlined,
+                                          iconColor: const Color(0xFF2563EB),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: _buildMetricTile(
+                                          title: 'Online Time',
+                                          value: '6h 24m',
+                                          icon: Icons.access_time_rounded,
+                                          iconColor: const Color(0xFF10B981),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildMetricTile(
+                                          title: 'Avg. Rating',
+                                          value: '4.8 ★',
+                                          icon: Icons.star_outline_rounded,
+                                          iconColor: const Color(0xFFF59E0B),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: _buildMetricTile(
+                                          title: 'Total Earnings',
+                                          value: '₹23,600',
+                                          icon: Icons.account_balance_wallet_outlined,
+                                          iconColor: const Color(0xFF6366F1),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
 
-                        SizedBox(height: bottomMargin),
-                      ],
+                              // 6. Instant Cash Out Card
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: QuickServeColors.borderLight),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.02),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(Icons.payments_outlined, color: QuickServeColors.primaryBlue, size: 20),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: const [
+                                          Text(
+                                            'Instant Cash Out',
+                                            style: TextStyle(
+                                              color: QuickServeColors.textDark,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 1),
+                                          Text(
+                                            'Get your earnings instantly',
+                                            style: TextStyle(
+                                              color: QuickServeColors.textSecondary,
+                                              fontSize: 10.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: widget.onInstantCashOutTap ?? widget.onEarningsTap,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: QuickServeColors.primaryBlue,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        elevation: 0,
+                                      ),
+                                      child: const Text('Withdraw >', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // 7. Compatibility quick actions (Emergency SOS & Support Hub)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: widget.onSosTap,
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFEF2F2),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: const Color(0xFFFECACA)),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: const [
+                                            Icon(Icons.shield_outlined, color: QuickServeColors.statusRed, size: 15),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              'Emergency SOS',
+                                              style: TextStyle(
+                                                color: QuickServeColors.statusRed,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: widget.onSaathiAiTap,
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF8FAFC),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: QuickServeColors.borderLight),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: const [
+                                            Icon(Icons.support_agent, color: QuickServeColors.primaryBlue, size: 15),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              'Support Hub',
+                                              style: TextStyle(
+                                                color: QuickServeColors.textDark,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // 8. Incoming Ride Request Banner
+                              InkWell(
+                                onTap: _isOnline
+                                    ? widget.onIncomingRequestTap
+                                    : () async {
+                                        setState(() => _isOnline = true);
+                                         await RideService.instance.setOnlineStatus(true);
+                                         if (context.mounted) {
+                                           AppToast.success(context, 'You are now Online. Searching for rides...');
+                                         }
+                                      },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: _isOnline ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: _isOnline ? const Color(0xFFBFDBFE) : QuickServeColors.borderLight),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        _isOnline ? Icons.notifications_active : Icons.power_off,
+                                        color: _isOnline ? QuickServeColors.primaryBlue : QuickServeColors.textSecondary,
+                                        size: 17,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _isOnline
+                                              ? 'Ride Request Available! View Incoming Request'
+                                              : 'You are Offline • Tap Go Online to receive ride requests',
+                                          style: TextStyle(
+                                            color: _isOnline ? QuickServeColors.primaryBlue : QuickServeColors.textSecondary,
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.arrow_forward_ios,
+                                        color: _isOnline ? QuickServeColors.primaryBlue : QuickServeColors.textSecondary,
+                                        size: 11,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   );
                 },
               ),
             ),
 
-            // 4-Tab Bottom Navigation Bar
+            // Bottom Navigation (Home Tab Active: Index 0)
             AppBottomNav(
-              currentIndex: 0, // Home
+              currentIndex: 0,
               onTap: (idx) {
                 if (widget.onBottomNavTap != null) {
                   widget.onBottomNavTap!(idx);
@@ -116,562 +771,102 @@ class _DriverHomeDashboardScreenState extends State<DriverHomeDashboardScreen> {
     );
   }
 
-  Widget _buildTopBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: QuickServeColors.borderLight, width: 1)),
-      ),
-      child: Row(
-        children: [
-          // Driver Avatar
-          GestureDetector(
-            onTap: widget.onProfileTap,
-            child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: QuickServeColors.primaryOrange, width: 2),
-              ),
-              child: const SafeAvatar(
-                imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-                radius: 19,
-                fallbackText: 'RS',
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Driver Greeting
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Good Morning,',
-                  style: TextStyle(
-                    color: QuickServeColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                const Text(
-                  'Rohit Sharma',
-                  style: TextStyle(
-                    color: QuickServeColors.textDark,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Notification Bell
-          IconButton(
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.notifications_outlined, color: QuickServeColors.textDark, size: 22),
-                Positioned(
-                  top: -2,
-                  right: -2,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      color: QuickServeColors.primaryOrange,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            onPressed: widget.onNotificationTap,
-          ),
-
-          const SizedBox(width: 4),
-
-          // Online / Offline Switch Pill
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _isOnline = !_isOnline;
-              });
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: _isOnline ? const Color(0xFFE8F8EE) : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: _isOnline ? QuickServeColors.statusGreen : const Color(0xFFCBD5E1),
-                  width: 1.2,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: _isOnline ? QuickServeColors.statusGreen : const Color(0xFF94A3B8),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    _isOnline ? 'Online' : 'Offline',
-                    style: TextStyle(
-                      color: _isOnline ? QuickServeColors.statusGreen : const Color(0xFF64748B),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMapSection(double height) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: QuickServeColors.borderLight, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          // Light vector map
-          const LightMapView(),
-
-          // Location Overlay Badge at Top Left
-          Positioned(
-            top: 8,
-            left: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: QuickServeColors.borderLight),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.location_on, color: QuickServeColors.primaryOrange, size: 16),
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Current Location: Sector 62, Noida',
-                      style: TextStyle(
-                        color: QuickServeColors.textDark,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Icon(Icons.gps_fixed, color: QuickServeColors.textMuted, size: 14),
-                ],
-              ),
-            ),
-          ),
-
-          // High Demand Surge Chip at Bottom Right
-          Positioned(
-            bottom: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: QuickServeColors.primaryOrange,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: QuickServeColors.primaryOrange.withOpacity(0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.local_fire_department, color: Colors.white, size: 13),
-                  SizedBox(width: 3),
-                  Text(
-                    'High Demand Zone (1.4x)',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricsGrid(bool isCompact) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildMetricCard(
-                icon: Icons.directions_car_filled_outlined,
-                iconColor: QuickServeColors.primaryOrange,
-                iconBg: const Color(0xFFFFECE6),
-                title: 'Available Requests',
-                value: '5',
-                subtitle: 'in 2 km radius',
-                isCompact: isCompact,
-                onTap: widget.onIncomingRequestTap,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildMetricCard(
-                icon: Icons.account_balance_wallet_outlined,
-                iconColor: QuickServeColors.statusGreen,
-                iconBg: const Color(0xFFE8F8EE),
-                title: "Today's Earnings",
-                value: '₹ 1,240',
-                subtitle: '+₹360 incentive',
-                isCompact: isCompact,
-                onTap: widget.onEarningsTap,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: isCompact ? 6 : 8),
-        Row(
-          children: [
-            Expanded(
-              child: _buildMetricCard(
-                icon: Icons.check_circle_outline,
-                iconColor: const Color(0xFF2563EB),
-                iconBg: const Color(0xFFEFF6FF),
-                title: 'Completed Rides',
-                value: '12',
-                subtitle: '98% acceptance',
-                isCompact: isCompact,
-                onTap: widget.onTripsTap,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildMetricCard(
-                icon: Icons.access_time,
-                iconColor: const Color(0xFF8B5CF6),
-                iconBg: const Color(0xFFF5F3FF),
-                title: 'Online Hours',
-                value: '5h 20m',
-                subtitle: 'Target: 8h',
-                isCompact: isCompact,
-                onTap: null,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMetricCard({
+  Widget _buildActionCircle({
+    required String label,
     required IconData icon,
-    required Color iconColor,
-    required Color iconBg,
-    required String title,
-    required String value,
-    required String subtitle,
-    required bool isCompact,
-    VoidCallback? onTap,
+    required Color bgColor,
+    required VoidCallback? onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 10 : 12,
-          vertical: isCompact ? 8 : 10,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: QuickServeColors.borderLight, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  width: isCompact ? 30 : 34,
-                  height: isCompact ? 30 : 34,
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: iconColor, size: isCompact ? 16 : 18),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: bgColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: bgColor.withOpacity(0.25),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
                 ),
-                if (onTap != null)
-                  Icon(Icons.arrow_forward_ios, color: QuickServeColors.textMuted, size: isCompact ? 10 : 11),
               ],
             ),
-            SizedBox(height: isCompact ? 5 : 7),
-            Text(
-              value,
-              style: TextStyle(
-                color: QuickServeColors.textDark,
-                fontSize: isCompact ? 16 : 18,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Icon(icon, color: Colors.white, size: 21),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: QuickServeColors.textDark,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 2),
-            Text(
-              title,
-              style: TextStyle(
-                color: QuickServeColors.textSecondary,
-                fontSize: isCompact ? 11 : 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 1),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: QuickServeColors.textMuted,
-                fontSize: isCompact ? 9 : 10,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildIncomingRequestBanner(bool isCompact) {
+  Widget _buildMetricTile({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+  }) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: QuickServeColors.primaryOrange.withOpacity(0.3), width: 1.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: QuickServeColors.borderLight),
         boxShadow: [
           BoxShadow(
-            color: QuickServeColors.primaryOrange.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 12 : 14,
-        vertical: isCompact ? 8 : 11,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(isCompact ? 6 : 7),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFECE6),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.ring_volume, color: QuickServeColors.primaryOrange, size: isCompact ? 18 : 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Ride Request Available!',
-                      style: TextStyle(
-                        color: QuickServeColors.textDark,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'Priya Sharma • Sector 62 to Connaught Place',
-                      style: TextStyle(
-                        color: QuickServeColors.textSecondary,
-                        fontSize: isCompact ? 11 : 12,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F8EE),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  '₹ 362',
-                  style: TextStyle(
-                    color: QuickServeColors.statusGreen,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: isCompact ? 8 : 10),
-          ElevatedButton(
-            onPressed: widget.onIncomingRequestTap,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: QuickServeColors.primaryOrange,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: isCompact ? 9 : 11),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              elevation: 0,
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Icon(icon, color: iconColor, size: 17),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Flexible(
-                  child: Text(
-                    'View Incoming Request (Screen 10)',
-                    style: TextStyle(fontSize: isCompact ? 13 : 14, fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: QuickServeColors.textDark,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Icon(Icons.arrow_forward, size: 15),
+                const SizedBox(height: 1),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: QuickServeColors.textSecondary,
+                    fontSize: 10.5,
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildQuickActionsRow(bool isCompact) {
-    return Row(
-      children: [
-        // SOS Button
-        Expanded(
-          child: GestureDetector(
-            onTap: widget.onSosTap,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                vertical: isCompact ? 10 : 12,
-                horizontal: isCompact ? 8 : 10,
-              ),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFCA5A5)),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.warning_amber_rounded, color: QuickServeColors.statusRed, size: 17),
-                  SizedBox(width: 5),
-                  Flexible(
-                    child: Text(
-                      'Emergency SOS',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: QuickServeColors.statusRed,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-
-        // Support Hub
-        Expanded(
-          child: GestureDetector(
-            onTap: widget.onSaathiAiTap,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                vertical: isCompact ? 10 : 12,
-                horizontal: isCompact ? 8 : 10,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: QuickServeColors.borderLight),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.headset_mic_outlined, color: QuickServeColors.textDark, size: 17),
-                  SizedBox(width: 5),
-                  Flexible(
-                    child: Text(
-                      'Support Hub',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: QuickServeColors.textDark,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

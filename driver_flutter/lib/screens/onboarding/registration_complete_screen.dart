@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../services/token_storage_service.dart';
 
 class RegistrationCompleteScreen extends StatelessWidget {
   final VoidCallback? onGoHome;
@@ -53,9 +54,9 @@ class RegistrationCompleteScreen extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              const Text(
-                'Thank you, Rohit Sharma! Your partner application and vehicle documents are under automated review. You can now explore the driver app dashboard.',
-                style: TextStyle(
+              Text(
+                'Thank you, ${TokenStorageService.instance.driverProfile?['name'] ?? 'Partner'}! Your partner application and vehicle documents are under automated review. You can now explore the driver app dashboard.',
+                style: const TextStyle(
                   color: QuickServeColors.textSecondary,
                   fontSize: 14,
                   height: 1.4,
@@ -79,12 +80,15 @@ class RegistrationCompleteScreen extends StatelessWidget {
                     children: [
                       Icon(Icons.hourglass_top, color: Color(0xFF2563EB), size: 16),
                       SizedBox(width: 8),
-                      Text(
-                        'Document Verification Status: 90% Complete',
-                        style: TextStyle(
-                          color: Color(0xFF2563EB),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                      Flexible(
+                        child: Text(
+                          'Document Verification Status: 90% Complete',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Color(0xFF2563EB),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],

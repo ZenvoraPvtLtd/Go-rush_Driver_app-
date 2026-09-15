@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/app_toast.dart';
 import '../core/theme.dart';
 
 class SupportTicketsScreen extends StatefulWidget {
@@ -100,9 +101,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
               padding: const EdgeInsets.all(16),
               child: ElevatedButton(
                 onPressed: widget.onCreateTicketTap ?? () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Opening new support dispute ticket form...')),
-                  );
+                  AppToast.show(context, 'Opening new support dispute ticket form...');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: QuickServeColors.primaryOrange,

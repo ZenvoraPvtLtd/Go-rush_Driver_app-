@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const config = require('./config/env');
 const apiRoutes = require('./routes');
 const notFound = require('./middleware/notFound');
@@ -36,14 +37,17 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 3. Lightweight Request Logger
+// 3. Lightweight Request Logger with File Output
+const fs = require('fs');
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    if (process.env.NODE_ENV !== 'test') {
-      console.log(`[HTTP] ${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`);
-    }
+    const logLine = `${new Date().toISOString()} [HTTP] ${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms body=${JSON.stringify(req.body)}\n`;
+    console.log(logLine.trim());
+    try {
+      fs.appendFileSync(path.resolve(__dirname, '../requests.log'), logLine);
+    } catch (_) {}
   });
   next();
 });

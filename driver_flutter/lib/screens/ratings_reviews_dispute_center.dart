@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
+import '../core/app_toast.dart';
 import '../widgets/safe_avatar.dart';
 
 class RatingsReviewsDisputeScreen extends StatelessWidget {
   final VoidCallback? onBackTap;
   final VoidCallback? onDisputeTap;
+  final Function(int)? onBottomNavTap;
 
   const RatingsReviewsDisputeScreen({
     super.key,
     this.onBackTap,
     this.onDisputeTap,
+    this.onBottomNavTap,
   });
 
   @override
@@ -43,7 +46,7 @@ class RatingsReviewsDisputeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Rating Overview Card
+              // Rating Overview Card with Crown (Phone 10)
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -60,32 +63,35 @@ class RatingsReviewsDisputeScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    // Score Column
+                    // Score Column with Trophy/Crown
                     Column(
                       children: [
+                        const Icon(Icons.military_tech, color: Color(0xFFFBBF24), size: 30),
+                        const SizedBox(height: 4),
                         const Text(
                           '4.8',
                           style: TextStyle(
                             color: QuickServeColors.textDark,
-                            fontSize: 44,
+                            fontSize: 40,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const Row(
                           children: [
-                            Icon(Icons.star, color: Color(0xFFFBBF24), size: 18),
-                            Icon(Icons.star, color: Color(0xFFFBBF24), size: 18),
-                            Icon(Icons.star, color: Color(0xFFFBBF24), size: 18),
-                            Icon(Icons.star, color: Color(0xFFFBBF24), size: 18),
-                            Icon(Icons.star_half, color: Color(0xFFFBBF24), size: 18),
+                            Icon(Icons.star, color: Color(0xFFFBBF24), size: 16),
+                            Icon(Icons.star, color: Color(0xFFFBBF24), size: 16),
+                            Icon(Icons.star, color: Color(0xFFFBBF24), size: 16),
+                            Icon(Icons.star, color: Color(0xFFFBBF24), size: 16),
+                            Icon(Icons.star_half, color: Color(0xFFFBBF24), size: 16),
                           ],
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          '138 Ratings',
+                          '120 reviews',
                           style: TextStyle(
                             color: QuickServeColors.textSecondary,
                             fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -93,19 +99,19 @@ class RatingsReviewsDisputeScreen extends StatelessWidget {
 
                     const SizedBox(width: 24),
 
-                    // Progress Bars
+                    // Progress Bars (Phone 10: 85%, 10%, 3%, 1%, 1%)
                     Expanded(
                       child: Column(
                         children: [
-                          _buildStarBar(5, 0.65),
+                          _buildStarBar(5, 0.85),
                           const SizedBox(height: 4),
-                          _buildStarBar(4, 0.20),
+                          _buildStarBar(4, 0.10),
                           const SizedBox(height: 4),
-                          _buildStarBar(3, 0.10),
+                          _buildStarBar(3, 0.03),
                           const SizedBox(height: 4),
-                          _buildStarBar(2, 0.03),
+                          _buildStarBar(2, 0.01),
                           const SizedBox(height: 4),
-                          _buildStarBar(1, 0.02),
+                          _buildStarBar(1, 0.01),
                         ],
                       ),
                     ),
@@ -113,7 +119,7 @@ class RatingsReviewsDisputeScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               // Badges / Compliments
               Container(
@@ -127,7 +133,7 @@ class RatingsReviewsDisputeScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Top Compliments',
+                      'Top Driver Badges',
                       style: TextStyle(
                         color: QuickServeColors.textDark,
                         fontSize: 14,
@@ -139,17 +145,17 @@ class RatingsReviewsDisputeScreen extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _buildBadge('⭐ Smooth Driving (94)'),
-                        _buildBadge('✨ Clean Car (88)'),
-                        _buildBadge('⏱ On-Time Arrival (76)'),
-                        _buildBadge('🤝 Polite Behaviour (65)'),
+                        _buildBadge('⭐ Smooth Driving (98)'),
+                        _buildBadge('✨ Clean Car (92)'),
+                        _buildBadge('⏱ On-Time Arrival (84)'),
+                        _buildBadge('🤝 Polite Behaviour (76)'),
                       ],
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               const Text(
                 'Recent Passenger Feedback',
@@ -162,34 +168,45 @@ class RatingsReviewsDisputeScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
 
+              // Review 1: Rahul Sharma (5★)
               _buildReviewCard(
-                name: 'Amit Patel',
+                name: 'Rahul Sharma',
                 time: '2 hours ago',
                 rating: 5,
-                comment: 'Polite driver, clean car, and very smooth ride on the highway!',
+                comment: 'Great driving, very polite! Reached destination quickly.',
                 avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
               ),
 
               const SizedBox(height: 10),
 
+              // Review 2: Priya Singh (5★)
               _buildReviewCard(
-                name: 'Neha Gupta',
+                name: 'Priya Singh',
                 time: 'Yesterday',
                 rating: 5,
-                comment: 'Arrived on time and took the best route to avoid traffic jams in CP.',
+                comment: 'On time pickup, smooth drive and very comfortable car.',
                 avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+              ),
+
+              const SizedBox(height: 10),
+
+              // Review 3: Amit Kumar (4★)
+              _buildReviewCard(
+                name: 'Amit Kumar',
+                time: '2 days ago',
+                rating: 4,
+                comment: 'Clean car and safe ride. AC was running well.',
+                avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
               ),
 
               const SizedBox(height: 20),
 
               ElevatedButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Loading all 138 customer reviews...')),
-                  );
+                  AppToast.info(context, 'All 120 reviews loaded.');
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: QuickServeColors.primaryOrange,
+                  backgroundColor: QuickServeColors.primaryBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -197,6 +214,7 @@ class RatingsReviewsDisputeScreen extends StatelessWidget {
                 ),
                 child: const Text('View All Reviews', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),

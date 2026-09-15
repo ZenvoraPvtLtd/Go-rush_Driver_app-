@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import '../core/app_toast.dart';
 import '../core/theme.dart';
 
 class ScheduledRidesAdvanceBookingsScreen extends StatefulWidget {
   final VoidCallback? onBackTap;
   final VoidCallback? onSosTap;
+  final Function(int)? onBottomNavTap;
 
   const ScheduledRidesAdvanceBookingsScreen({
     super.key,
     this.onBackTap,
     this.onSosTap,
+    this.onBottomNavTap,
   });
 
   @override
@@ -16,7 +19,7 @@ class ScheduledRidesAdvanceBookingsScreen extends StatefulWidget {
 }
 
 class _ScheduledRidesAdvanceBookingsScreenState extends State<ScheduledRidesAdvanceBookingsScreen> {
-  int _selectedTab = 0; // 0: Upcoming, 1: Completed, 2: Cancelled
+  int _selectedTab = 0; // 0: Upcoming, 1: Past
 
   @override
   Widget build(BuildContext context) {
@@ -45,21 +48,61 @@ class _ScheduledRidesAdvanceBookingsScreenState extends State<ScheduledRidesAdva
       body: SafeArea(
         child: Column(
           children: [
-            // Filter Tabs
+            // Filter Segment Tabs: [ Upcoming ] | [ Past ] (Phone 11)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: QuickServeColors.borderLight),
                 ),
                 child: Row(
                   children: [
-                    _buildTab('Upcoming (2)', 0),
-                    _buildTab('Completed', 1),
-                    _buildTab('Cancelled', 2),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedTab = 0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _selectedTab == 0 ? QuickServeColors.statusGreen : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Upcoming',
+                              style: TextStyle(
+                                color: _selectedTab == 0 ? Colors.white : QuickServeColors.textDark,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedTab = 1),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _selectedTab == 1 ? QuickServeColors.statusGreen : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Past',
+                              style: TextStyle(
+                                color: _selectedTab == 1 ? Colors.white : QuickServeColors.textDark,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -68,56 +111,73 @@ class _ScheduledRidesAdvanceBookingsScreenState extends State<ScheduledRidesAdva
             // Rides List
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
                 physics: const BouncingScrollPhysics(),
                 children: [
                   _buildScheduledCard(
-                    dateTime: 'Tomorrow, 06:00 AM',
-                    fare: '₹ 620',
+                    title: 'Airport Ride',
+                    dateTime: '12 May, 06:30 AM',
+                    fare: '₹450',
                     pickup: 'Sector 62, Noida',
-                    drop: 'IGI Airport Terminal 3, New Delhi',
+                    drop: 'Terminal 3, IGI Airport, New Delhi',
                     passenger: 'Aarav Mehta',
-                    flightNumber: 'Flight AI-102 (Domestic)',
+                    badgeText: 'Confirmed',
+                    badgeColor: QuickServeColors.primaryBlue,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   _buildScheduledCard(
-                    dateTime: 'Tomorrow, 02:30 PM',
-                    fare: '₹ 450',
+                    title: 'Office Ride',
+                    dateTime: '12 May, 09:15 AM',
+                    fare: '₹220',
                     pickup: 'Shipra Mall, Indirapuram',
-                    drop: 'Cyber Hub, DLF Phase 2 Gurgaon',
+                    drop: 'Cyber City, Gurugram',
                     passenger: 'Meera Deshmukh',
-                    flightNumber: null,
+                    badgeText: 'Confirmed',
+                    badgeColor: QuickServeColors.statusGreen,
                   ),
+                  const SizedBox(height: 12),
+                  _buildScheduledCard(
+                    title: 'Hotel Ride',
+                    dateTime: '12 May, 02:00 PM',
+                    fare: '₹380',
+                    pickup: 'Connaught Place, Central Delhi',
+                    drop: 'Taj Palace, Chanakyapuri, New Delhi',
+                    passenger: 'Vikram Sethi',
+                    badgeText: 'Advance Booking',
+                    badgeColor: const Color(0xFFF59E0B),
+                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
 
-            // Bottom CTA: View Open Bids
+            // Bottom CTA: Browse Open Advance Bids
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Scanning 8 new advance ride bids nearby...')),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: QuickServeColors.primaryOrange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.calendar_today, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Browse Open Advance Bids',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                  ],
+              padding: const EdgeInsets.all(18),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    AppToast.show(context, 'Scanning available advance ride bookings...');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: QuickServeColors.primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.calendar_today, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Browse Scheduled Bids',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -127,40 +187,15 @@ class _ScheduledRidesAdvanceBookingsScreenState extends State<ScheduledRidesAdva
     );
   }
 
-  Widget _buildTab(String label, int index) {
-    final isSelected = _selectedTab == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedTab = index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? QuickServeColors.primaryOrange : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : QuickServeColors.textSecondary,
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildScheduledCard({
+    required String title,
     required String dateTime,
     required String fare,
     required String pickup,
     required String drop,
     required String passenger,
-    String? flightNumber,
+    required String badgeText,
+    required Color badgeColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -170,8 +205,8 @@ class _ScheduledRidesAdvanceBookingsScreenState extends State<ScheduledRidesAdva
         border: Border.all(color: QuickServeColors.borderLight),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -184,14 +219,28 @@ class _ScheduledRidesAdvanceBookingsScreenState extends State<ScheduledRidesAdva
             children: [
               Row(
                 children: [
-                  const Icon(Icons.alarm, color: QuickServeColors.primaryOrange, size: 16),
-                  const SizedBox(width: 6),
                   Text(
-                    dateTime,
+                    title,
                     style: const TextStyle(
                       color: QuickServeColors.textDark,
-                      fontSize: 13,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      badgeText,
+                      style: TextStyle(
+                        color: badgeColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -199,84 +248,62 @@ class _ScheduledRidesAdvanceBookingsScreenState extends State<ScheduledRidesAdva
               Text(
                 fare,
                 style: const TextStyle(
-                  color: QuickServeColors.primaryOrange,
-                  fontSize: 16,
+                  color: QuickServeColors.statusGreen,
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(color: QuickServeColors.statusGreen, shape: BoxShape.circle),
-                  ),
-                  Container(width: 2, height: 26, color: const Color(0xFFCBD5E1)),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(color: QuickServeColors.statusRed, shape: BoxShape.circle),
-                  ),
-                ],
+              const Icon(Icons.schedule, color: QuickServeColors.textSecondary, size: 14),
+              const SizedBox(width: 6),
+              Text(
+                dateTime,
+                style: const TextStyle(
+                  color: QuickServeColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      pickup,
-                      style: const TextStyle(color: QuickServeColors.textDark, fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      drop,
-                      style: const TextStyle(color: QuickServeColors.textDark, fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ],
+              const Icon(Icons.person, color: QuickServeColors.textSecondary, size: 14),
+              const SizedBox(width: 4),
+              Text(
+                passenger,
+                style: const TextStyle(
+                  color: QuickServeColors.textSecondary,
+                  fontSize: 12,
                 ),
               ),
             ],
           ),
-          if (flightNumber != null) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '✈ $flightNumber',
-                style: const TextStyle(color: Color(0xFF2563EB), fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: QuickServeColors.borderLight),
-          const SizedBox(height: 10),
+          const Divider(height: 18, color: QuickServeColors.borderLight),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Passenger: $passenger',
-                style: const TextStyle(color: QuickServeColors.textSecondary, fontSize: 12),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F8EE),
-                  borderRadius: BorderRadius.circular(6),
+              const Icon(Icons.circle, color: QuickServeColors.statusGreen, size: 10),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  pickup,
+                  style: const TextStyle(color: QuickServeColors.textDark, fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: const Text(
-                  'Confirmed',
-                  style: TextStyle(color: QuickServeColors.statusGreen, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.location_on, color: QuickServeColors.statusRed, size: 12),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  drop,
+                  style: const TextStyle(color: QuickServeColors.textDark, fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

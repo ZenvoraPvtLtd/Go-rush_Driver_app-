@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../widgets/safe_avatar.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class FleetAdminOperationsScreen extends StatefulWidget {
   final VoidCallback? onBack;
+  final Function(int)? onBottomNavTap;
 
-  const FleetAdminOperationsScreen({super.key, this.onBack});
+  const FleetAdminOperationsScreen({super.key, this.onBack, this.onBottomNavTap});
 
   @override
   State<FleetAdminOperationsScreen> createState() => _FleetAdminOperationsScreenState();
 }
 
 class _FleetAdminOperationsScreenState extends State<FleetAdminOperationsScreen> {
-  int _selectedNavIndex = 1; // 1: Drivers (Active)
-  int _selectedFilter = 0; // 0: All, 1: Active, 2: Pending, 3: Inactive
+  int _selectedFleetTab = 0;
 
   final List<Map<String, dynamic>> _drivers = [
     {
       'name': 'Rohit Sharma',
-      'phone': '+91 98765 43210',
-      'vehicle': 'Honda City (DL 01 AB 1234)',
+      'phone': '+91 81224 367641',
+      'vehicle': 'Toyota Etios (DL 01 AB 1234)',
       'status': 'Active',
       'rating': '4.8 ★',
-      'avatar': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      'avatar': 'assets/captain_aman.jpg',
     },
     {
       'name': 'Amit Singh',
@@ -48,504 +49,345 @@ class _FleetAdminOperationsScreenState extends State<FleetAdminOperationsScreen>
       'rating': '4.7 ★',
       'avatar': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
     },
-    {
-      'name': 'Pankaj Kumar',
-      'phone': '+91 98444 55667',
-      'vehicle': 'Tata Tigor EV (DL 02 EV 7890)',
-      'status': 'Inactive',
-      'rating': '4.6 ★',
-      'avatar': 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150',
-    },
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: QuickServeColors.surfaceLight,
-      body: Row(
-        children: [
-          // Dark Navy Sidebar (#0F172A)
-          _buildSidebar(),
-
-          // Main Admin Content Area
-          Expanded(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Mobile phone layout matching Phone 24
+        return Scaffold(
+          backgroundColor: QuickServeColors.surfaceLight,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: QuickServeColors.textDark),
+              onPressed: widget.onBack ?? () => Navigator.of(context).maybePop(),
+            ),
+            title: const Text(
+              'Fleet Management',
+              style: TextStyle(
+                color: QuickServeColors.textDark,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            bottom: const PreferredSize(
+              preferredSize: Size.fromHeight(1),
+              child: Divider(height: 1, color: QuickServeColors.borderLight),
+            ),
+          ),
+          body: SafeArea(
             child: Column(
               children: [
-                _buildTopAdminHeader(),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(16),
                     physics: const BouncingScrollPhysics(),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Title, Search Bar & Filter Bar
-                        _buildControlsBar(),
-
-                        const SizedBox(height: 16),
-
-                        // Drivers Table Card
-                        _buildDriversTable(),
-
-                        const SizedBox(height: 16),
-
-                        // Pagination Footer
-                        _buildPaginationFooter(),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebar() {
-    final navItems = [
-      {'icon': Icons.dashboard_outlined, 'label': 'Dashboard'},
-      {'icon': Icons.people_alt, 'label': 'Drivers'},
-      {'icon': Icons.directions_car_outlined, 'label': 'Rides'},
-      {'icon': Icons.payment_outlined, 'label': 'Payments'},
-      {'icon': Icons.bar_chart_outlined, 'label': 'Reports'},
-      {'icon': Icons.settings_outlined, 'label': 'Settings'},
-    ];
-
-    return Container(
-      width: 220,
-      color: QuickServeColors.adminSidebar, // #0F172A
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // QuickServe Admin Logo
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: QuickServeColors.primaryOrange,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.speed, color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'QuickServe',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'Admin Portal',
-                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Nav Links
-            Expanded(
-              child: ListView.builder(
-                itemCount: navItems.length,
-                itemBuilder: (context, idx) {
-                  final item = navItems[idx];
-                  final isSelected = _selectedNavIndex == idx;
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: isSelected ? QuickServeColors.primaryOrange : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(
-                        item['icon'] as IconData,
-                        color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-                        size: 20,
-                      ),
-                      title: Text(
-                        item['label'] as String,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-                          fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        // 4 Metrics Grid (Phone 24: Total Drivers 124, Active 98, Pending 12, Vehicles 110)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildMetricCard(
+                                title: 'Total Drivers',
+                                value: '124',
+                                icon: Icons.people_alt_outlined,
+                                color: QuickServeColors.primaryBlue,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildMetricCard(
+                                title: 'Active Drivers',
+                                value: '98',
+                                icon: Icons.check_circle_outline,
+                                color: QuickServeColors.statusGreen,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      onTap: () => setState(() => _selectedNavIndex = idx),
-                    ),
-                  );
-                },
-              ),
-            ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildMetricCard(
+                                title: 'Pending Approval',
+                                value: '12',
+                                icon: Icons.hourglass_top_rounded,
+                                color: const Color(0xFFF59E0B),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildMetricCard(
+                                title: 'Total Vehicles',
+                                value: '110',
+                                icon: Icons.directions_car_outlined,
+                                color: const Color(0xFF8B5CF6),
+                              ),
+                            ),
+                          ],
+                        ),
 
-            // Admin User Info
-            Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: QuickServeColors.primaryOrange,
-                    child: Text('AD', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Fleet Ops Admin', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                        Text('Super Admin Role', style: TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+                        const SizedBox(height: 20),
+
+                        // Section Title: Fleet Actions
+                        const Text(
+                          'Fleet Operations',
+                          style: TextStyle(
+                            color: QuickServeColors.textDark,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        _buildActionTile(
+                          icon: Icons.map_outlined,
+                          title: 'Driver Roster & Live Tracking',
+                          subtitle: 'View live GPS locations of all 98 active drivers',
+                          onTap: () {},
+                        ),
+                        const SizedBox(height: 10),
+                        _buildActionTile(
+                          icon: Icons.verified_user_outlined,
+                          title: 'Driver Onboarding Approvals',
+                          subtitle: '12 new partner applications awaiting document review',
+                          badge: '12 New',
+                          onTap: () {},
+                        ),
+                        const SizedBox(height: 10),
+                        _buildActionTile(
+                          icon: Icons.car_repair_outlined,
+                          title: 'Vehicle Maintenance & Compliance',
+                          subtitle: 'Insurance, fitness certificates and PUC tracking',
+                          onTap: () {},
+                        ),
+                        const SizedBox(height: 10),
+                        _buildActionTile(
+                          icon: Icons.bar_chart_outlined,
+                          title: 'Revenue & Commission Analytics',
+                          subtitle: 'Fleet weekly revenue: ₹4,82,400 (Settled)',
+                          onTap: () {},
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Drivers Roster Preview
+                        const Text(
+                          'Top Performing Drivers',
+                          style: TextStyle(
+                            color: QuickServeColors.textDark,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: QuickServeColors.borderLight),
+                          ),
+                          child: Column(
+                            children: _drivers.map((driver) {
+                              return Column(
+                                children: [
+                                  ListTile(
+                                    leading: SafeAvatar(
+                                      imageUrl: driver['avatar'] as String,
+                                      radius: 20,
+                                      fallbackText: (driver['name'] as String).substring(0, 1),
+                                    ),
+                                    title: Text(
+                                      driver['name'] as String,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                    subtitle: Text(
+                                      driver['vehicle'] as String,
+                                      style: const TextStyle(fontSize: 12, color: QuickServeColors.textSecondary),
+                                    ),
+                                    trailing: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: driver['status'] == 'Active'
+                                            ? QuickServeColors.statusGreenLight
+                                            : QuickServeColors.statusAmberLight,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        driver['status'] as String,
+                                        style: TextStyle(
+                                          color: driver['status'] == 'Active'
+                                              ? QuickServeColors.statusGreen
+                                              : QuickServeColors.statusAmber,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  if (driver != _drivers.last)
+                                    const Divider(height: 1, color: QuickServeColors.borderLight),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+                ),
 
-  Widget _buildTopAdminHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: QuickServeColors.borderLight)),
-      ),
-      child: Row(
-        children: [
-          if (widget.onBack != null)
-            IconButton(
-              icon: const Icon(Icons.arrow_back, color: QuickServeColors.textDark),
-              onPressed: widget.onBack,
-            ),
-          const Text(
-            'Driver Management',
-            style: TextStyle(
-              color: QuickServeColors.textDark,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F8EE),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.circle, color: QuickServeColors.statusGreen, size: 8),
-                SizedBox(width: 6),
-                Text(
-                  '480 Drivers Online',
-                  style: TextStyle(color: QuickServeColors.statusGreen, fontSize: 12, fontWeight: FontWeight.bold),
+                // 5-Tab Fleet Bottom Navigation (Phone 24)
+                AppBottomNav(
+                  isFleetMode: true,
+                  currentIndex: _selectedFleetTab,
+                  onTap: (idx) {
+                    setState(() => _selectedFleetTab = idx);
+                    if (widget.onBottomNavTap != null) {
+                      widget.onBottomNavTap!(idx);
+                    }
+                  },
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildControlsBar() {
-    return Row(
-      children: [
-        // Search bar
-        Expanded(
-          flex: 4,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: QuickServeColors.borderLight),
-            ),
-            child: const TextField(
-              decoration: InputDecoration(
-                hintText: 'Search by driver name, phone, or vehicle number...',
-                hintStyle: TextStyle(color: QuickServeColors.textMuted, fontSize: 13),
-                prefixIcon: Icon(Icons.search, color: QuickServeColors.textSecondary, size: 20),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-
-        // Status Filter Chips
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: QuickServeColors.borderLight),
-          ),
-          child: Row(
-            children: [
-              _buildFilterChip('All', 0),
-              _buildFilterChip('Active', 1),
-              _buildFilterChip('Pending', 2),
-              _buildFilterChip('Inactive', 3),
-            ],
-          ),
-        ),
-
-        const SizedBox(width: 12),
-
-        // Add Driver Button
-        ElevatedButton.icon(
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Add Driver'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: QuickServeColors.primaryOrange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            elevation: 0,
-          ),
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Add driver modal dialog opened')),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(String label, int index) {
-    final isSelected = _selectedFilter == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedFilter = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? QuickServeColors.primaryOrange : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : QuickServeColors.textSecondary,
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDriversTable() {
+  Widget _buildMetricCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: QuickServeColors.borderLight),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Table(
-        columnWidths: const {
-          0: FlexColumnWidth(2.5),
-          1: FlexColumnWidth(2.0),
-          2: FlexColumnWidth(2.5),
-          3: FlexColumnWidth(1.2),
-          4: FlexColumnWidth(1.2),
-          5: FlexColumnWidth(1.2),
-        },
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Table Header
-          TableRow(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            children: [
-              _buildTableHeaderCell('DRIVER NAME'),
-              _buildTableHeaderCell('PHONE NUMBER'),
-              _buildTableHeaderCell('VEHICLE DETAILS'),
-              _buildTableHeaderCell('STATUS'),
-              _buildTableHeaderCell('RATING'),
-              _buildTableHeaderCell('ACTION'),
-            ],
+            child: Icon(icon, color: color, size: 20),
           ),
-          // Rows
-          ..._drivers.map((d) {
-            final isPending = d['status'] == 'Pending';
-            final isActive = d['status'] == 'Active';
-            final statusColor = isActive
-                ? QuickServeColors.statusGreen
-                : (isPending ? QuickServeColors.primaryOrange : const Color(0xFF64748B));
-
-            return TableRow(
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: QuickServeColors.borderLight)),
-              ),
-              children: [
-                // Driver Name + Avatar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Row(
-                    children: [
-                      SafeAvatar(imageUrl: d['avatar'] as String, radius: 16, fallbackText: d['name'][0]),
-                      const SizedBox(width: 10),
-                      Text(
-                        d['name'] as String,
-                        style: const TextStyle(color: QuickServeColors.textDark, fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-                // Phone
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Text(
-                    d['phone'] as String,
-                    style: const TextStyle(color: QuickServeColors.textSecondary, fontSize: 13),
-                  ),
-                ),
-                // Vehicle
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Text(
-                    d['vehicle'] as String,
-                    style: const TextStyle(color: QuickServeColors.textDark, fontSize: 13),
-                  ),
-                ),
-                // Status
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      d['status'] as String,
-                      style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                // Rating
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Text(
-                    d['rating'] as String,
-                    style: const TextStyle(color: QuickServeColors.textDark, fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                // Action
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: TextButton(
-                    onPressed: () {},
-                    style: TextButton.styleFrom(
-                      foregroundColor: isPending ? QuickServeColors.primaryOrange : QuickServeColors.textDark,
-                      padding: EdgeInsets.zero,
-                      alignment: Alignment.centerLeft,
-                    ),
-                    child: Text(isPending ? 'Verify' : 'View', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            );
-          }),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(
+              color: QuickServeColors.textDark,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            title,
+            style: const TextStyle(
+              color: QuickServeColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTableHeaderCell(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: QuickServeColors.textSecondary,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
+  Widget _buildActionTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    String? badge,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: QuickServeColors.borderLight),
         ),
-      ),
-    );
-  }
-
-  Widget _buildPaginationFooter() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-          'Showing 1 to 5 of 480 driver partners',
-          style: TextStyle(color: QuickServeColors.textSecondary, fontSize: 12),
-        ),
-        Row(
+        child: Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.chevron_left, size: 20, color: QuickServeColors.textSecondary),
-              onPressed: () {},
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: QuickServeColors.primaryBlue, size: 20),
             ),
-            _buildPageNumber('1', true),
-            _buildPageNumber('2', false),
-            _buildPageNumber('3', false),
-            _buildPageNumber('4', false),
-            _buildPageNumber('5', false),
-            IconButton(
-              icon: const Icon(Icons.chevron_right, size: 20, color: QuickServeColors.textSecondary),
-              onPressed: () {},
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: QuickServeColors.textDark,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: QuickServeColors.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
             ),
+            if (badge != null)
+              Container(
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: QuickServeColors.statusAmberLight,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: QuickServeColors.statusAmber, width: 0.8),
+                ),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    color: QuickServeColors.statusAmber,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            const Icon(Icons.chevron_right, color: QuickServeColors.textMuted, size: 18),
           ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPageNumber(String page, bool isSelected) {
-    return Container(
-      width: 28,
-      height: 28,
-      margin: const EdgeInsets.symmetric(horizontal: 2),
-      decoration: BoxDecoration(
-        color: isSelected ? QuickServeColors.primaryOrange : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Center(
-        child: Text(
-          page,
-          style: TextStyle(
-            color: isSelected ? Colors.white : QuickServeColors.textDark,
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          ),
         ),
       ),
     );
