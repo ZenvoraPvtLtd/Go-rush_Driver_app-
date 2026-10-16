@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../core/app_toast.dart';
 import '../services/wallet_service.dart';
+import '../services/razorpay_payment_service.dart';
 import '../widgets/app_bottom_nav.dart';
 
 class DriverWalletScreen extends StatefulWidget {
@@ -30,6 +31,7 @@ class _DriverWalletScreenState extends State<DriverWalletScreen>
   @override
   void initState() {
     super.initState();
+    RazorpayPaymentService.instance.initialize();
     _balanceAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -46,6 +48,7 @@ class _DriverWalletScreenState extends State<DriverWalletScreen>
 
   @override
   void dispose() {
+    RazorpayPaymentService.instance.dispose();
     _balanceAnimController.dispose();
     _amountController.dispose();
     _walletService.removeListener(_onWalletChanged);
@@ -79,12 +82,20 @@ class _DriverWalletScreenState extends State<DriverWalletScreen>
   Future<void> _processRecharge(double amount) async {
     setState(() => _isRechargingCustom = true);
     try {
-      final result = await _walletService.recharge(amount);
+      final result = await RazorpayPaymentService.instance.checkoutWalletRecharge(
+        amount: amount,
+        context: context,
+      );
       if (!mounted) return;
-      if (result.success) {
+      if (result.isSuccess) {
         AppToast.success(context, result.message);
-        Navigator.of(context).pop();
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+        await _walletService.fetchWallet();
         await _walletService.fetchTransactions();
+      } else if (result.isCancelled) {
+        AppToast.info(context, result.message);
       } else {
         AppToast.error(context, result.message);
       }
@@ -232,14 +243,17 @@ class _DriverWalletScreenState extends State<DriverWalletScreen>
                       ],
                     ),
                     const SizedBox(height: 10),
+                    if (_isRechargingCustom) ...[
+                      const LinearProgressIndicator(color: QuickServeColors.primaryOrange),
+                      const SizedBox(height: 8),
+                    ],
 
                     // ── Transaction List ─────────────────────────────
                     if (_walletService.transactions.isEmpty)
                       _buildEmptyTransactions()
                     else
                       ..._walletService.transactions
-                          .map((txn) => _TransactionTile(txn: txn))
-                          .toList(),
+                          .map((txn) => _TransactionTile(txn: txn)),
 
                     const SizedBox(height: 24),
                   ],
@@ -275,22 +289,7 @@ class _DriverWalletScreenState extends State<DriverWalletScreen>
                     padding: const EdgeInsets.only(right: 8),
                     child: _QuickAmountChip(
                       amount: amt,
-                      onTap: () async {
-                        setState(() => _isRechargingCustom = true);
-                        try {
-                          final result = await _walletService.recharge(amt);
-                          if (!mounted) return;
-                          if (result.success) {
-                            AppToast.success(context, result.message);
-                            await _walletService.fetchTransactions();
-                          } else {
-                            AppToast.error(context, result.message);
-                          }
-                        } finally {
-                          if (mounted)
-                            setState(() => _isRechargingCustom = false);
-                        }
-                      },
+                      onTap: () => _processRecharge(amt),
                     ),
                   ),
                 ),
@@ -982,7 +981,69 @@ class _RechargeBottomSheetState extends State<_RechargeBottomSheet> {
                   horizontal: 16, vertical: 14),
             ),
           ),
+          const SizedBox(height: 14),
+          // Suggested Quick Amounts
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [200, 500, 1000, 2000].map((amt) {
+              return InkWell(
+                onTap: () {
+                  widget.amountController.text = amt.toString();
+                  setState(() {});
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: QuickServeColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: widget.amountController.text == amt.toString()
+                          ? QuickServeColors.primaryBlue
+                          : QuickServeColors.borderLight,
+                    ),
+                  ),
+                  child: Text(
+                    '+ ₹$amt',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: widget.amountController.text == amt.toString()
+                          ? QuickServeColors.primaryBlue
+                          : QuickServeColors.textDark,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
           const SizedBox(height: 20),
+          // Razorpay Security Trust Banner
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.lock_outline_rounded, size: 14, color: Color(0xFF16A34A)),
+                SizedBox(width: 6),
+                Text(
+                  'Secured by Razorpay • UPI, Card & NetBanking',
+                  style: TextStyle(
+                    color: Color(0xFF15803D),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           SizedBox(
             height: 50,
             child: ElevatedButton(
@@ -1016,9 +1077,21 @@ class _RechargeBottomSheetState extends State<_RechargeBottomSheet> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2.5, color: Colors.white),
                     )
-                  : const Text('ADD MONEY',
-                      style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.bold)),
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.payment_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'PAY VIA RAZORPAY',
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ],

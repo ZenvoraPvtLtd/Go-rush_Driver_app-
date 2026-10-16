@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const walletController = require('../controllers/wallet.controller');
+const razorpayRoutes = require('./razorpay.routes');
 const { protect } = require('../middleware/auth.middleware');
+
+// Mount Razorpay sub-routes: /api/driver/wallet/razorpay/*
+router.use('/razorpay', razorpayRoutes);
 
 // GET /api/driver/wallet — wallet balance + status
 router.get('/', protect, walletController.getWallet);

@@ -81,6 +81,12 @@ class ApiConfig {
   static const String ridesHistoryEndpoint = '/api/rides/history';
   static const String ridesEarningsEndpoint = '/api/rides/earnings';
 
+  // Razorpay Payment Gateway Endpoints
+  static const String razorpayConfigEndpoint = '/api/payment/razorpay/config';
+  static const String razorpayOrderEndpoint = '/api/payment/razorpay/order';
+  static const String razorpayVerifyEndpoint = '/api/payment/razorpay/verify';
+  static const String razorpayTransactionsEndpoint = '/api/payment/razorpay/transactions';
+
   // Request timeouts
   static const Duration requestTimeout = Duration(seconds: 2);
   static const Duration healthCheckTimeout = Duration(seconds: 2);

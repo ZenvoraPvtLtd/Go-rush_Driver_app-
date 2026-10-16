@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const rideController = require('../controllers/ride.controller');
+const razorpayRoutes = require('./razorpay.routes');
 const { protect, optionalProtect } = require('../middleware/auth.middleware');
+
+// Mount Razorpay Payment Gateway routes: /api/payment/razorpay/*
+router.use('/razorpay', razorpayRoutes);
 
 // GET /api/payment/earnings - Driver earnings & completed trip revenue
 router.get('/earnings', optionalProtect, rideController.getEarnings);

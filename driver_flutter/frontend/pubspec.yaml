@@ -21,6 +21,13 @@ dependencies:
   share_plus: ^10.1.4
   image_picker: ^1.1.2
   file_picker: ^10.3.8
+  google_maps_flutter: ^2.10.0
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.7.0
+  firebase_messaging: ^16.7.0
+  firebase_crashlytics: ^5.4.0
+  firebase_analytics: ^12.6.0
+  razorpay_flutter: ^1.4.0
 
 dev_dependencies:
   flutter_test:

@@ -359,6 +359,98 @@ class WalletService extends ChangeNotifier {
     return '₹${intVal < 0 ? '-' : ''}$rest,$lastThree';
   }
 
+  /// Create Razorpay Order on server
+  Future<Map<String, dynamic>?> createRazorpayOrder(double amount, {String purpose = 'WALLET_RECHARGE'}) async {
+    try {
+      final response = await _postWithFallback(
+        ApiConfig.razorpayOrderEndpoint,
+        {'amount': amount, 'purpose': purpose},
+      );
+      if (response != null && response.statusCode < 400) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>?;
+        if (data?['success'] == true && data?['data'] != null) {
+          return data!['data'] as Map<String, dynamic>;
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[WalletService] createRazorpayOrder error: $e');
+      return null;
+    }
+  }
+
+  /// Fetch Razorpay public Key ID from server
+  Future<String?> fetchRazorpayKeyId() async {
+    try {
+      final response = await _getWithFallback(ApiConfig.razorpayConfigEndpoint);
+      if (response != null && response.statusCode < 400) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>?;
+        if (data?['success'] == true && data?['data']?['keyId'] != null) {
+          return data!['data']['keyId'] as String;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Verify and credit wallet upon Razorpay checkout completion
+  Future<({bool success, String message, WalletInfo? wallet})> verifyAndApplyRazorpayPayment({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    try {
+      final response = await _postWithFallback(
+        ApiConfig.razorpayVerifyEndpoint,
+        {
+          'razorpay_order_id': orderId,
+          'razorpay_payment_id': paymentId,
+          'razorpay_signature': signature,
+        },
+      );
+
+      if (response == null) {
+        return (
+          success: false,
+          message: 'Unable to reach payment verification server. Please contact support.',
+          wallet: _wallet,
+        );
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>?;
+      if (data?['success'] == true) {
+        if (data?['wallet'] != null) {
+          _wallet = WalletInfo.fromJson(data!['wallet'] as Map<String, dynamic>);
+        }
+        await fetchTransactions();
+        notifyListeners();
+        return (
+          success: true,
+          message: data?['message'] as String? ?? 'Payment verified successfully!',
+          wallet: _wallet,
+        );
+      }
+
+      return (
+        success: false,
+        message: data?['message'] as String? ?? 'Payment verification failed.',
+        wallet: null,
+      );
+    } catch (e) {
+      return (
+        success: false,
+        message: 'Verification network error: ${e.toString()}',
+        wallet: null,
+      );
+    }
+  }
+
+  /// Update wallet state directly from verified model
+  void updateWallet(WalletInfo info) {
+    _wallet = info;
+    notifyListeners();
+  }
+
   void clearSession() {
     _wallet = null;
     _transactions = [];
