@@ -58,7 +58,7 @@ class RazorpayPaymentService {
   double? get activeAmount => _activeAmount;
 
   /// Fallback test key ID if backend config is unavailable
-  static const String _defaultTestKeyId = 'rzp_test_5148492040182';
+  static const String _defaultTestKeyId = 'rzp_test_TobNJ7AqjRIQqR';
 
   /// Initialize Razorpay instance and register event listeners safely
   void initialize() {
